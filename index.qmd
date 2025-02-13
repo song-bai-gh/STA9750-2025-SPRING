@@ -1,0 +1,10 @@
+---
+title: "Welcome to my website!"
+---
+
+```{r}
+#| include: false
+1+1
+```
+--------------
+Last Updated: `r format(Sys.time(), "%A %m %d, %Y at %H:%M%p")`
