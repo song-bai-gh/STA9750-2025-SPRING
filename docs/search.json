@@ -4,6 +4,6 @@
     "href": "index.html",
     "title": "Welcome to my website!",
     "section": "",
-    "text": "if (!require(“leaflet”)) install.packages(“leaflet”) if (!require(“tidyverse”)) { install.packages(“tidyverse”) } library(tidyverse) library(rvest) library(leaflet)\npAGE &lt;- read_html(“https://en.wikipedia.org/wiki/Baruch_College”) pAGE |&gt; html_element(“.latitude”) |&gt; html_text2() -&gt; BaruchLatitude baruch_longitude &lt;- pAGE |&gt; html_element(“.longitude”) |&gt; html_text2()\nBaruchLatitude &lt;- sum(as.numeric(strsplit( BaruchLatitude, “[^0123456789]” )[[1]]) * (1 / 60)^(0:2), na.rm = TRUE) baruch_longitude &lt;- sum(as.numeric(strsplit(baruch_longitude, “[^0123456789]”)[[1]]) * (1 / 60)^(0:2), na.rm = TRUE)\nleaflet() %&gt;% addTiles() %&gt;% setView(-baruch_longitude, BaruchLatitude, zoom = 17) %&gt;% addPopups(-baruch_longitude, BaruchLatitude, “I am at Baruch College!”)"
+    "text": "Last Updated: Saturday 03 01, 2025 at 16:54PM"
   }
 ]
