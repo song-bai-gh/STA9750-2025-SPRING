@@ -3,6 +3,10 @@ title: "Welcome to my website!"
 ---
 
 ```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
 if (!require("leaflet")) install.packages("leaflet")
 if (!require("tidyverse")) {
   install.packages("tidyverse")
