@@ -1,0 +1,466 @@
+---
+title: "Mini-Project #01: Welcome to the Commission to Analyze Taxpayer Spending (CATS)"
+---
+
+The New York City's new Commission to Analyze Taxpayer Spending (CATS) intended to understand the city's expenses and wondered if there were any opportunities to spend taxpayers' money more efficiently. As a senior technical analyst, I will help analyze the city payroll and identify the instances where senior agency officials make significantly more than rank-and-file city employees. I will use City payroll data from NYC Open Data and highlight possible savings to be submitted to the commission.
+
+Here are some quick facts about city payroll data. 
+
+- Member of civilian complaint review board has the highest base rate of pay.
+- Gregory Russ had the highest payroll of 414707 in 2020, 2021, and 2022.
+- James Internicola worked the most overtime hours of 3693.
+- Office of Racial Equity has the highest average total annual payroll.
+- Department of Ed Pedagogical has the most employees in every year.
+- Board of Election has the highest overtime usage.
+- The average salary of employees working outside the New York City is 55503.
+- The city’s payroll has grown 13384.23 dollars and 32.29% over the past 10 years.
+
+I started by downloading the city payroll data with the following code (Click “Show the code” to see). This code also created a data file in the directory. 
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+
+if(!file.exists("data/mp01/nyc_payroll_export.csv")){
+  dir.create("data/mp01", showWarnings=FALSE, recursive=TRUE)
+  
+  ENDPOINT <- "https://data.cityofnewyork.us/resource/k397-673e.json"
+  
+  if(!require("httr2")) install.packages("httr2")
+  library(httr2)
+  
+  if(!require("jsonlite")) install.packages("jsonlite")
+  library(jsonlite)
+  
+  if(!require("dplyr")) install.packages("dplyr")
+  library(dplyr)
+  
+  if(!require("readr")) install.packages("readr")
+  library(readr)
+  
+  BATCH_SIZE <- 50000
+  OFFSET     <- 0
+  END_OF_EXPORT <- FALSE
+  ALL_DATA <- list()
+  
+  while(!END_OF_EXPORT){
+    cat("Requesting items", OFFSET, "to", BATCH_SIZE + OFFSET, "\n")
+    
+    req <- request(ENDPOINT) |>
+      req_url_query(`$limit`  = BATCH_SIZE, 
+                    `$offset` = OFFSET)
+    
+    resp <- req_perform(req)
+    
+    batch_data <- fromJSON(resp_body_string(resp))
+    
+    ALL_DATA <- c(ALL_DATA, list(batch_data))
+    
+    if(NROW(batch_data) != BATCH_SIZE){
+      END_OF_EXPORT <- TRUE
+      
+      cat("End of Data Export Reached\n")
+    } else {
+      OFFSET <- OFFSET + BATCH_SIZE
+    }
+  }
+  
+  ALL_DATA <- bind_rows(ALL_DATA)
+  
+  cat("Data export complete:", NROW(ALL_DATA), "rows and", NCOL(ALL_DATA), "columns.")
+  
+  write_csv(ALL_DATA, "data/mp01/nyc_payroll_export.csv")
+}
+```
+
+After I acquired the latest NYC Payroll Data, I used read_csv function from the readr package to read my data file into R. I made a few changes before my analysis like changing some of the string columns to more conventional punctuation. Specifically, I used a mutate command and the str_to_title from stringr package to convert the following columns’ formatting. 
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+
+library(readr)
+nyc_payroll <- read_csv("data/mp01/nyc_payroll_export.csv")
+
+library(dplyr)
+library(stringr)
+
+nyc_payroll <- nyc_payroll %>%
+  mutate(
+    agency_name = str_to_title(agency_name),
+    last_name = str_to_title(last_name),
+    first_name = str_to_title(first_name),
+    work_location_borough = str_to_title(work_location_borough),
+    title_description = str_to_title(title_description),
+    leave_status_as_of_june_30 = str_to_title(leave_status_as_of_june_30)
+  )
+```
+Let’s check our data with glimpse function to make sure it is properly formatting.
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+
+glimpse(nyc_payroll)
+```
+We can see now the formatting of the six columns’ values are well converted. We could also understand what the relevant columns are of the data set by looking at the above output. Next, let’s take a look at the career of the current mayor Eric L. Adams by using the following code to create a table. 
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+
+carrer_adams <- nyc_payroll |> 
+  filter(last_name == "Adams" & first_name == "Eric" & mid_init == "L") |>
+  arrange(fiscal_year) |>
+  summarize(fiscal_year,title_description,agency_name,base_salary)
+
+carrer_adams <- carrer_adams |>
+  mutate(base_salary = ifelse(fiscal_year == "2022"&title_description=="Borough President", 
+                              179200/2, base_salary)) |>
+  mutate(base_salary = ifelse(fiscal_year == "2022"&title_description=="Mayor", 
+                              258750/2, base_salary))
+
+carrer_adams <- carrer_adams |>
+  rename(
+    'Fiscal Year' = fiscal_year,
+    Position = title_description,
+    Agency = agency_name,
+    'Total Salary' = base_salary
+  )
+
+```
+
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+library(DT)
+library(scales)
+
+carrer_adams |> 
+  mutate(`Total Salary` = dollar(`Total Salary`)) |>
+  datatable(options=list(searching=FALSE, 
+                         paging=FALSE,
+                         info=FALSE))
+
+```
+
+Because the Mayoral term does not line up with the fiscal year, we can see from the table that in 2022, Mr. Adams held two jobs as Borough President and Mayor. I calculated his total salary in that year as the average of total salaries for Borough President and Mayor. I used the DT package to create a better visualization of the employee salary table for Mr. Adams.
+
+After that, I wanted to compute actual total compensation for each employee in our data set. I took a look at the different pay structures by using the following code. 
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+unique(nyc_payroll$pay_basis)
+```
+We can see employees are paid hourly, daily, annually or other way. Thus, I used a case_when function inside a mutate command to handle this. 
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+total_compensation <- nyc_payroll |>
+  mutate(
+    total_compensation = case_when(
+      pay_basis == "per Annum" ~ base_salary, 
+      pay_basis == "per Hour" ~ base_salary * (regular_hours+1.5* ot_hours),
+      pay_basis == "per Day" ~ base_salary * (regular_hours+ot_hours)/7.5,
+      TRUE ~ NA_real_  
+    )
+  )
+```
+
+Now that we have computed total compensation for each city employee, we can go forward to analyze the city payroll. Let’s begin by answering some general questions about the data set.
+
+- Which job title has the highest base rate of pay? (If needed, assume a standard 2000 hour work year and no overtime.)
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+total_compensation |> mutate(
+  base_rate = case_when(
+    pay_basis == "per Annum" ~ base_salary, 
+    pay_basis == "per Hour" ~ base_salary * 2000,
+    pay_basis == "per Day" ~ base_salary * 2000/7.5,
+    TRUE ~ NA_real_  
+  )
+) |> group_by(title_description) |> summarize(mean_rate=mean(base_rate)) |>
+  arrange(desc(mean_rate))
+
+```
+We can see the list of job titles with the highest base rate of pay. But the first title seems an outlier, I would say the member of civilian complaint review board has the highest base rate of pay.
+
+- Which individual & in what year had the single highest city total payroll (regular and overtime combined)?
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+total_compensation |> 
+  summarize(fiscal_year,first_name,last_name,total_compensation) |>
+  arrange(desc(total_compensation))
+```
+We can see Gregory Russ had the highest payroll of 414707 in 2020, 2021, and 2022.
+
+- Which individual worked the most overtime hours in this data set?
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+total_compensation |> summarize(fiscal_year,first_name,last_name,ot_hours) |>
+  arrange(desc(ot_hours))
+```
+James Internicola worked the most overtime hours of 3693.
+
+- Which agency has the highest average total annual payroll (base and overtime pay per employee)?
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+total_compensation |> group_by(agency_name) |>
+  summarize(avg_tot_pay=mean(total_compensation)) |>
+  arrange(desc(avg_tot_pay))
+```
+Office of Racial Equity has the highest average total annual payroll.
+
+- Which agency has the most employees on payroll in each year?
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+total_compensation |>
+  group_by(fiscal_year, agency_name) |>
+  summarize(num_empl=n(),.groups="drop") |>
+  group_by(fiscal_year) |>
+  slice_max(num_empl,n=1)
+
+```
+Department of Ed Pedagogical has the most employees in every year.
+
+- Which agency has the highest overtime usage (compared to regular hours)?
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+total_compensation |>
+  group_by(agency_name) |>
+  summarize(ot_usage=mean(ot_hours)/mean(regular_hours)) |>
+  arrange(desc(ot_usage))
+```
+Board of Election has the highest overtime usage.
+
+- What is the average salary of employees who work outside the five boroughs? (That is, whose work_location_borough is not one of the five counties.)
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+total_compensation |>
+  filter(!work_location_borough %in% c("Manhattan", "Brooklyn", "Queens", 
+                                     "Bronx", "Richmond")) |>
+  summarize(avg_salary=mean(total_compensation,na.rm=TRUE))
+```
+The average salary of employees working outside the New York City is 55503.
+
+- How much has the city’s aggregate payroll grown over the past 10 years?
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+growth <- total_compensation |>
+  group_by(fiscal_year) |>
+  summarize(agg_pay=mean(total_compensation,na.rm=TRUE))
+
+agg_pay_2024 <- growth |> filter(fiscal_year=="2024") |>
+  pull(agg_pay)
+
+agg_pay_2014 <- growth |> filter(fiscal_year=="2014") |>
+  pull(agg_pay)
+
+growth_amount <- agg_pay_2024 - agg_pay_2014
+growth_percentage <- growth_amount/agg_pay_2014*100
+growth_amount
+growth_percentage
+```
+The city's payroll has grown 13384.23 dollars and 32.29% over the past 10 years.
+
+Now, I will analyze three possible policy changes to see their impact on overall spending. I have two policies suggested and will come up with my own policy proposal for analysis. For each policy, I will i) compute its impact on city payroll, ii) determine any other staffing adjustments required, and iii) make a recommendation to the CATS.
+
+Policy I: Capping Salaries at Mayoral Level
+
+We are interested in finding out employees making more than the mayor in each fiscal year. I first computed the total mayor pay for each fiscal year, and then identify employees who made more than this amount in the same fiscal year. 
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+mayor_pay_per_year <- total_compensation |>
+  filter(title_description == "Mayor") |>
+  group_by(fiscal_year) |>
+  summarize(mayor_pay = mean(total_compensation))
+
+employees_above_mayor <- total_compensation |>
+  left_join(mayor_pay_per_year, by = "fiscal_year") |>
+  filter(total_compensation > mayor_pay)
+
+mayor_pay_per_year
+employees_above_mayor
+```
+Next, we want to know how much would be saved if these employees’ salary were capped at the mayor’s level.
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+employees_above_mayor <- employees_above_mayor |>
+  mutate(savings = total_compensation - mayor_pay)
+total_savings <- sum(employees_above_mayor$savings)
+total_savings
+```
+It looks like a large amount of money. We would also want to know if this policy was adopted, which agencies and job titles would bear the most. We do this by calculating the average savings in each combination of agencies and job titles and sorting them to see the top ones.
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+savings_by_agency_and_title <- employees_above_mayor |>
+  filter(fiscal_year>"2014") |>
+  group_by(agency_name,title_description ) |>
+  summarize(avg_savings = mean(savings)) |>
+  arrange(desc(avg_savings))
+savings_by_agency_and_title
+```
+The Chair of NYC Housing Authority would bear the brunt of this policy with an average savings of 118639. If this policy was adopted, around 273 million would be saved each year. We would not need to hire more employees to implement that policy. It is almost the easiest way to save the money and would not bring too much negative impact to the city. I would recommend to the CATS that this policy should be adopted to generate more than 200 millions of dollars every year which can be used to bring more benifits to the city.
+
+Policy II: Increasing Staffing to Reduce Overtime Expenses
+
+There are some potential upsides of increasing employment to reduce overtime cost. Let’s first find out how many overtime hours worked for each combination of agency and job title. Then we estimate the number of new full-time employees needed to replace that much overtime. I did the job using the following code.
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+overtime_by_agency_and_title <- total_compensation |>
+  group_by(agency_name , title_description) |>
+  summarize(total_overtime_hours = sum(ot_hours)) |>
+  arrange(desc(total_overtime_hours))
+
+overtime_with_ft_equivalents <- overtime_by_agency_and_title |>
+  mutate(full_time_equivalents = total_overtime_hours / 2000)
+
+overtime_by_agency_and_title
+overtime_with_ft_equivalents
+```
+Then, we will see how much money could be saved if we replaced the overtime working with regular time working from new employees.
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+base_rate <- total_compensation |> mutate(
+  base_rate = case_when(
+    pay_basis == "per Annum" ~ base_salary, 
+    pay_basis == "per Hour" ~ base_salary * 2000,
+    pay_basis == "per Day" ~ base_salary * 2000/7.5,
+    TRUE ~ NA_real_  
+  )
+)
+
+overtime_by_agency_and_title <- base_rate |>
+  group_by(agency_name, title_description) |>
+  summarize(total_overtime_hours = sum(ot_hours), 
+            avg_regular_salary = mean(base_rate)) |>
+  arrange(desc(total_overtime_hours)) 
+
+overtime_by_agency_and_title <- overtime_by_agency_and_title |>
+  mutate(overtime_cost = total_overtime_hours * 1.5 * avg_regular_salary / 2000)
+  
+savings_by_agency_and_title <- overtime_by_agency_and_title |>
+  mutate(savings = overtime_cost - (total_overtime_hours * avg_regular_salary / 2000)) 
+savings_by_agency_and_title |>
+  summarize(agency_name,title_description,savings) |>
+  arrange(desc(savings))
+```
+Next, let's determine the aggregate savings possible by agency using the following code.
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+aggregate_savings_by_agency <- savings_by_agency_and_title |>
+  group_by(agency_name) |>
+  summarize(total_savings = sum(savings)) |>
+  arrange(desc(total_savings))
+aggregate_savings_by_agency
+```
+The total potencial savings for this policy for each combination of agency and job title is shown above. Around 1 billion dollars could be saved for Police officers in Police Dapartment.The total number of new employees needed would be 29449 for the same job. The police officers in police departments would be affected the most with this new policy. On agency level, Department of Correction would face the largest impact.
+
+I would recommend this policy to the CATS, especially to hire more new full time employees as police officers in Police Department because this would help save more than 1 billion dollars every year and also reduce the police officers' pressure. On agency level, department of correction should absolutely adopt this policy because they could save far more than any other agencies in the city. 
+
+Policy III: Remote Working as a Citywide Policy
+
+I want to introduce a citywide remote working policy for all eligible employees in the city. This could help reduce costs like spending for office space and equipment. Let’s consider if half of the total employees in our data set could work remotely and 1% of their total compensation could be saved due to this policy. How much money could be saved annually. 
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+total_compensation |>
+  summarize(remote_savings=sum(total_compensation,na.rm=TRUE)*0.5*0.01)
+```
+Nearly 1.5 billion dollars could be saved for the city. If this policy was adopted, the time employees spend on commute would also be saved. We assume half an hour of the saved time could convert same amount of time from overtime to regular time per day. I want to know how much money could be saved.
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+base_rate |> 
+  summarize(ot_to_regular_savings=
+              sum(base_rate/2000*0.5*0.5,na.rm=TRUE)
+  )
+```
+The third policy would have reduced the total payroll expenses by 1.5 billion directly and 250 million with overtime hours converted to regular hours. To implement this policy, no more hiring are required. I recommended this policy to the CATS since it would not only reduce the payroll expenses but also provide more time to employees, which could help improve the productivity.
+
+However, I made some assumptions for the this policy like half of all employees could be working remotely and 1% of their total compensation would be saved following this policy. These might introduce error into my projections because I have not done enough research about how many employees could be remote workers or the proportion of their total salary that could be saved when this policy adopted.
+
+The above three policies could all work to help the Commission of Analyze Taxpayer Spending change how they spend taxpayers' money and make the process more efficient. The amount of money saved by adopting different policies ranges from hundreds of millions to billions per year. Each of them has different concertations like the combinations of agency and job title. The CATS could combine the three policies or adopt one policy in specific areas.
