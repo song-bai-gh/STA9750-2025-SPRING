@@ -68,5 +68,19 @@
     "title": "Commission to Analyze Taxpayer Spending (CATS)",
     "section": "3.8 How much has the city’s aggregate payroll grown over the past 10 years?",
     "text": "3.8 How much has the city’s aggregate payroll grown over the past 10 years?\n\n\nShow the code\ngrowth &lt;- total_compensation |&gt;\n  group_by(fiscal_year) |&gt;\n  summarize(agg_pay=mean(total_compensation,na.rm=TRUE))\n\nagg_pay_2024 &lt;- growth |&gt; filter(fiscal_year==\"2024\") |&gt;\n  pull(agg_pay)\n\nagg_pay_2014 &lt;- growth |&gt; filter(fiscal_year==\"2014\") |&gt;\n  pull(agg_pay)\n\ngrowth_amount &lt;- agg_pay_2024 - agg_pay_2014\ngrowth_percentage &lt;- growth_amount/agg_pay_2014*100\ngrowth_amount\n\n\n[1] 13384.23\n\n\nShow the code\ngrowth_percentage\n\n\n[1] 32.2868\n\n\nThe city’s payroll has grown 13384.23 dollars and 32.29% over the past 10 years.\nNow, I will analyze three possible policy changes to see their impact on overall spending. I have two policies suggested and will come up with my own policy proposal for analysis. For each policy, I will i) compute its impact on city payroll, ii) determine any other staffing adjustments required, and iii) make a recommendation to the CATS."
+  },
+  {
+    "objectID": "mp02.html",
+    "href": "mp02.html",
+    "title": "Report",
+    "section": "",
+    "text": "1 Introduction\n\n\n\n\n\n2 Conclusion"
+  },
+  {
+    "objectID": "mp02.html#conclusion",
+    "href": "mp02.html#conclusion",
+    "title": "Report",
+    "section": "2 Conclusion",
+    "text": "2 Conclusion"
   }
 ]
