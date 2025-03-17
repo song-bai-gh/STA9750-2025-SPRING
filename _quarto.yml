@@ -11,10 +11,10 @@ website:
     background: primary
     search: false
     left:
-      - text: Homepage
-        href: "./index.html"
-      - text: MP 01
-        href: "./mp01.html"
+      - text: "Homepage"
+        href: index.html
+      - text: "MP 01"
+        href: mp01.html
 format:
   html:
     theme: cerulean
