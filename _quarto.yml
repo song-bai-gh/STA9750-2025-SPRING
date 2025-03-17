@@ -10,6 +10,9 @@ website:
   navbar:
     background: primary
     search: false
+    right:
+      - text: "Homepage"
+        href: "./index.html"
     
 format:
   html:
