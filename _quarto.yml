@@ -20,10 +20,6 @@ format:
   html:
     theme: cerulean
     toc: false
-    margin-left: 0em
-    toc: true
-    code-copy: true
-    toc_depth: 5
 
 editor:
   mode: source
