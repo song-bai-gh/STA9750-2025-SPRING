@@ -4,16 +4,17 @@ author: Song Bai
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 format: 
   html: 
-    code-tools: true
+    code-tools: false
     code-fold: true
     toc: true
     toc-location: right
     number-sections: true
     toc-depth: 3
 ---
-
+# Summary
 The New York City's new Commission to Analyze Taxpayer Spending (CATS) intended to understand the city's expenses and wondered if there were any opportunities to spend taxpayers' money more efficiently. As a senior technical analyst, I will help analyze the city payroll and identify the instances where senior agency officials make significantly more than rank-and-file city employees. I will use City payroll data from NYC Open Data and highlight possible savings to be submitted to the commission.
 
+# Quick Facts
 Here are some quick facts about city payroll data. 
 
 - Member of civilian complaint review board has the highest base rate of pay.
