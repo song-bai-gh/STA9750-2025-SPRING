@@ -25,7 +25,7 @@ Here are some quick facts about city payroll data.
 - Board of Election has the highest overtime usage.
 - The average salary of employees working outside the New York City is 55503.
 - The city’s payroll has grown 13384.23 dollars and 32.29% over the past 10 years.
-
+# Data Downloading
 I started by downloading the city payroll data with the following code (Click “Show the code” to see). This code also created a data file in the directory. 
 
 ```{r}
@@ -197,10 +197,10 @@ total_compensation <- nyc_payroll |>
     )
   )
 ```
-
+# General Questions
 Now that we have computed total compensation for each city employee, we can go forward to analyze the city payroll. Let’s begin by answering some general questions about the data set.
 
-- Which job title has the highest base rate of pay? (If needed, assume a standard 2000 hour work year and no overtime.)
+## Which job title has the highest base rate of pay? (If needed, assume a standard 2000 hour work year and no overtime.)
 ```{r}
 #| echo: true
 #| message: false
@@ -220,7 +220,7 @@ total_compensation |> mutate(
 ```
 We can see the list of job titles with the highest base rate of pay. But the first title seems an outlier, I would say the member of civilian complaint review board has the highest base rate of pay.
 
-- Which individual & in what year had the single highest city total payroll (regular and overtime combined)?
+## Which individual & in what year had the single highest city total payroll (regular and overtime combined)?
 ```{r}
 #| echo: true
 #| message: false
@@ -233,7 +233,7 @@ total_compensation |>
 ```
 We can see Gregory Russ had the highest payroll of 414707 in 2020, 2021, and 2022.
 
-- Which individual worked the most overtime hours in this data set?
+## Which individual worked the most overtime hours in this data set?
 ```{r}
 #| echo: true
 #| message: false
@@ -245,7 +245,7 @@ total_compensation |> summarize(fiscal_year,first_name,last_name,ot_hours) |>
 ```
 James Internicola worked the most overtime hours of 3693.
 
-- Which agency has the highest average total annual payroll (base and overtime pay per employee)?
+## Which agency has the highest average total annual payroll (base and overtime pay per employee)?
 ```{r}
 #| echo: true
 #| message: false
@@ -258,7 +258,7 @@ total_compensation |> group_by(agency_name) |>
 ```
 Office of Racial Equity has the highest average total annual payroll.
 
-- Which agency has the most employees on payroll in each year?
+## Which agency has the most employees on payroll in each year?
 ```{r}
 #| echo: true
 #| message: false
@@ -274,7 +274,7 @@ total_compensation |>
 ```
 Department of Ed Pedagogical has the most employees in every year.
 
-- Which agency has the highest overtime usage (compared to regular hours)?
+## Which agency has the highest overtime usage (compared to regular hours)?
 ```{r}
 #| echo: true
 #| message: false
@@ -288,7 +288,7 @@ total_compensation |>
 ```
 Board of Election has the highest overtime usage.
 
-- What is the average salary of employees who work outside the five boroughs? (That is, whose work_location_borough is not one of the five counties.)
+## What is the average salary of employees who work outside the five boroughs? (That is, whose work_location_borough is not one of the five counties.)
 ```{r}
 #| echo: true
 #| message: false
@@ -302,7 +302,7 @@ total_compensation |>
 ```
 The average salary of employees working outside the New York City is 55503.
 
-- How much has the city’s aggregate payroll grown over the past 10 years?
+## How much has the city’s aggregate payroll grown over the past 10 years?
 ```{r}
 #| echo: true
 #| message: false
@@ -328,7 +328,7 @@ The city's payroll has grown 13384.23 dollars and 32.29% over the past 10 years.
 
 Now, I will analyze three possible policy changes to see their impact on overall spending. I have two policies suggested and will come up with my own policy proposal for analysis. For each policy, I will i) compute its impact on city payroll, ii) determine any other staffing adjustments required, and iii) make a recommendation to the CATS.
 
-Policy I: Capping Salaries at Mayoral Level
+# Policy I: Capping Salaries at Mayoral Level
 
 We are interested in finding out employees making more than the mayor in each fiscal year. I first computed the total mayor pay for each fiscal year, and then identify employees who made more than this amount in the same fiscal year. 
 ```{r}
@@ -377,7 +377,7 @@ savings_by_agency_and_title
 ```
 The Chair of NYC Housing Authority would bear the brunt of this policy with an average savings of 118639. If this policy was adopted, around 273 million would be saved each year. We would not need to hire more employees to implement that policy. It is almost the easiest way to save the money and would not bring too much negative impact to the city. I would recommend to the CATS that this policy should be adopted to generate more than 200 millions of dollars every year which can be used to bring more benifits to the city.
 
-Policy II: Increasing Staffing to Reduce Overtime Expenses
+# Policy II: Increasing Staffing to Reduce Overtime Expenses
 
 There are some potential upsides of increasing employment to reduce overtime cost. Let’s first find out how many overtime hours worked for each combination of agency and job title. Then we estimate the number of new full-time employees needed to replace that much overtime. I did the job using the following code.
 ```{r}
@@ -445,7 +445,7 @@ The total potencial savings for this policy for each combination of agency and j
 
 I would recommend this policy to the CATS, especially to hire more new full time employees as police officers in Police Department because this would help save more than 1 billion dollars every year and also reduce the police officers' pressure. On agency level, department of correction should absolutely adopt this policy because they could save far more than any other agencies in the city. 
 
-Policy III: Remote Working as a Citywide Policy
+# Policy III: Remote Working as a Citywide Policy
 
 I want to introduce a citywide remote working policy for all eligible employees in the city. This could help reduce costs like spending for office space and equipment. Let’s consider if half of the total employees in our data set could work remotely and 1% of their total compensation could be saved due to this policy. How much money could be saved annually. 
 
@@ -474,4 +474,5 @@ The third policy would have reduced the total payroll expenses by 1.5 billion di
 
 However, I made some assumptions for the this policy like half of all employees could be working remotely and 1% of their total compensation would be saved following this policy. These might introduce error into my projections because I have not done enough research about how many employees could be remote workers or the proportion of their total salary that could be saved when this policy adopted.
 
+# Conclusion
 The above three policies could all work to help the Commission of Analyze Taxpayer Spending change how they spend taxpayers' money and make the process more efficient. The amount of money saved by adopting different policies ranges from hundreds of millions to billions per year. Each of them has different concertations like the combinations of agency and job title. The CATS could combine the three policies or adopt one policy in specific areas.
