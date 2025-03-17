@@ -13,6 +13,8 @@ website:
     left:
       - text: "Homepage"
         href: "./index.html"
+      - text: "MP 01"
+        href: "./mp01.html"
     
 format:
   html:
