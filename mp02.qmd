@@ -1,0 +1,434 @@
+---
+title: "Environmental Efficiency of US Public Transit Systems"
+author: Song Bai
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+format: 
+  html: 
+    code-fold: true
+    toc: true
+    toc-location: right
+    number-sections: true
+    toc-depth: 5
+execute:
+  eval: true
+---
+
+## Introduction
+Green Transit Alliance for Investigation of Variance (GTA IV) gave a series of awards for the greenest public transit angencies. The winners of the various GTA IV awards went to **King County Metro**, **Everett Transit** and **RiverCities Transit**. We will explore US Public Transit systems to assess their environmental efficiency and will use a variety of data sources to i) determine how many riders are served by different transit systems; ii) determine how far each public transit system transports an average rider; and iii) investigate the effective emissions associated with each form of transit.
+
+## Data Import
+We download the EIA State Electricity Profiles, then use it to estimate the environmental impact of the electricity used to run certain transit systems.
+
+``` {r, echo=TRUE, message=FALSE, warning=FALSE}
+ensure_package <- function(pkg){
+    pkg <- as.character(substitute(pkg))
+    options(repos = c(CRAN = "https://cloud.r-project.org"))
+    if(!require(pkg, character.only=TRUE)) install.packages(pkg)
+    stopifnot(require(pkg, character.only=TRUE))
+}
+
+ensure_package(httr2)
+ensure_package(rvest)
+ensure_package(datasets)
+ensure_package(purrr)
+ensure_package(DT)
+ensure_package(stringr)
+ensure_package(dplyr)
+
+get_eia_sep <- function(state, abbr){
+    state_formatted <- str_to_lower(state) |> str_replace_all("\\s", "")
+    
+    dir_name <- file.path("data", "mp02")
+    file_name <- file.path(dir_name, state_formatted)
+    
+    dir.create(dir_name, showWarnings=FALSE, recursive=TRUE)
+    
+    if(!file.exists(file_name)){
+        BASE_URL <- "https://www.eia.gov"
+        REQUEST <- request(BASE_URL) |> 
+            req_url_path("electricity", "state", state_formatted)
+    
+        RESPONSE <- req_perform(REQUEST)
+    
+        resp_check_status(RESPONSE)
+        
+        writeLines(resp_body_string(RESPONSE), file_name)
+    }
+    
+    TABLE <- read_html(file_name) |> 
+        html_element("table") |> 
+        html_table() |>
+        mutate(Item = str_to_lower(Item))
+    
+    if("U.S. rank" %in% colnames(TABLE)){
+        TABLE <- TABLE |> rename(Rank = `U.S. rank`)
+    }
+    
+    CO2_MWh <- TABLE |> 
+        filter(Item == "carbon dioxide (lbs/mwh)") |>
+        pull(Value) |> 
+        str_replace_all(",", "") |>
+        as.numeric()
+    
+    PRIMARY <- TABLE |> 
+        filter(Item == "primary energy source") |> 
+        pull(Rank)
+    
+    RATE <- TABLE |>
+        filter(Item == "average retail price (cents/kwh)") |>
+        pull(Value) |>
+        as.numeric()
+    
+    GENERATION_MWh <- TABLE |>
+        filter(Item == "net generation (megawatthours)") |>
+        pull(Value) |>
+        str_replace_all(",", "") |>
+        as.numeric()
+    
+    data.frame(CO2_MWh               = CO2_MWh, 
+               primary_source        = PRIMARY,
+               electricity_price_MWh = RATE * 10, # / 100 cents to dollars &
+               # * 1000 kWh to MWH 
+               generation_MWh        = GENERATION_MWh, 
+               state                 = state, 
+               abbreviation          = abbr
+    )
+}
+
+EIA_SEP_REPORT <- map2(state.name, state.abb, get_eia_sep) |> list_rbind()
+```
+We use the following code to create a table.
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+ensure_package(scales)
+
+EIA_SEP_REPORT |> 
+    select(-abbreviation) |>
+    arrange(desc(CO2_MWh)) |>
+    mutate(CO2_MWh = number(CO2_MWh, big.mark=","), 
+           electricity_price_MWh = dollar(electricity_price_MWh), 
+           generation_MWh = number(generation_MWh, big.mark=",")) |>
+    rename(`Pounds of CO2 Emitted per MWh of Electricity Produced`=CO2_MWh, 
+           `Primary Source of Electricity Generation`=primary_source, 
+           `Average Retail Price for 1000 kWh`=electricity_price_MWh, 
+           `Total Generation Capacity (MWh)`= generation_MWh, 
+           State=state) |>
+    datatable()
+```
+
+## Initial Analysis of SEP Data
+
+Here are some quick facts gained using the ```EIA_SEP_REPORT``` data.
+
+1. **Hawaii** has the most expensive retail electricity with a price of **$386** per MWh.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Which state has the most expensive retail electricity?
+state_highest_price <- EIA_SEP_REPORT |>
+  select(electricity_price_MWh, state) |>
+  slice_max(electricity_price_MWh, n=1)
+```
+
+2. **West Virginia**, whose primary source of electricity generation is **coal**, has the 'dirtiest' electricity mix with **1925** pounds of CO2 emitted per MWh.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Which state has the 'dirtiest' electricity mix?
+state_dirtiest_electricity <- EIA_SEP_REPORT |>
+  select(CO2_MWh, primary_source, state) |>
+  slice_max(CO2_MWh, n=1)
+```
+
+3. On average, **805.37** pounds of CO2 are emitted per MWh of electricity produced in the US.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# On average, how many pounds of CO2 are emitted per MWh of electricity produced in the US? (Note that you will need to use a suitably weighted average here.)
+average_co2_emitted <- EIA_SEP_REPORT |>
+  summarize(
+    average_co2 = sum(CO2_MWh * generation_MWh) / sum(generation_MWh)
+  )
+```
+
+4. **Petroleum** is the rarest primary energy source in the US used only in one state. The associated cost of electricity is **$386** per MWh and it is used in **Hawaii**.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# What is the rarest primary energy source in the US? 
+rarest_source <- EIA_SEP_REPORT |>
+  group_by(primary_source) |>
+  summarize(num_state_source = n()) |>
+  slice_min(num_state_source, n = 1)
+
+# What is the associated cost of electricity and where is it used?
+rarest_source_table <- EIA_SEP_REPORT |>
+  select(primary_source, electricity_price_MWh, state) |>
+  filter(primary_source == "Petroleum")
+```
+
+5. NY's energy mix is **1.64** times cleaner than that of Texas.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# How many times cleaner is NY’s energy mix than that of Texas?
+co2_emitted_NY <- EIA_SEP_REPORT |>
+  filter(state == "New York") |>
+  summarize(CO2_MWh)
+
+co2_emitted_Texas <- EIA_SEP_REPORT |>
+  filter(state == "Texas") |>
+  summarize(CO2_MWh)
+
+times_cleaner <- co2_emitted_Texas / co2_emitted_NY
+```
+We now download the 2023 Annual Database Energy Consumption report and do some clean up. After that, we recode the Mode column.
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# import the data: 2023 Annual Database Energy Consumption
+ensure_package(readxl)
+# Create 'data/mp02' directory if not already present
+DATA_DIR <- file.path("data", "mp02")
+dir.create(DATA_DIR, showWarnings=FALSE, recursive=TRUE)
+
+NTD_ENERGY_FILE <- file.path(DATA_DIR, "2023_ntd_energy.xlsx")
+
+if(!file.exists(NTD_ENERGY_FILE)){
+    DS <- download.file("https://www.transit.dot.gov/sites/fta.dot.gov/files/2024-10/2023%20Energy%20Consumption.xlsx", 
+                  destfile=NTD_ENERGY_FILE, 
+                  method="curl")
+    
+    if(DS | (file.info(NTD_ENERGY_FILE)$size == 0)){
+        cat("I was unable to download the NTD Energy File. Please try again.\n")
+        stop("Download failed")
+    }
+}
+
+NTD_ENERGY_RAW <- read_xlsx(NTD_ENERGY_FILE)
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# do some basic clean-up
+ensure_package(tidyr)
+to_numeric_fill_0 <- function(x){
+    replace_na(as.numeric(x), 0)
+}
+
+NTD_ENERGY <- NTD_ENERGY_RAW |> 
+    select(-c(`Reporter Type`, 
+              `Reporting Module`, 
+              `Other Fuel`, 
+              `Other Fuel Description`)) |>
+    mutate(across(-c(`Agency Name`, 
+                     `Mode`,
+                     `TOS`), 
+                  to_numeric_fill_0)) |>
+    group_by(`NTD ID`, `Mode`, `Agency Name`) |>
+    summarize(across(where(is.numeric), sum), 
+              .groups = "keep") |>
+    mutate(ENERGY = sum(c_across(c(where(is.numeric))))) |>
+    filter(ENERGY > 0) |>
+    select(-ENERGY) |>
+    ungroup()
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# clean up mode column in ntd energy
+NTD_ENERGY <- NTD_ENERGY |>
+    mutate(Mode=case_when(
+        Mode == "HR" ~ "Heavy Rail",
+        Mode == "AR" ~ "Alaska Railroad",
+        Mode == "CB" ~ "Commuter Bus",
+        Mode == "CC" ~ "Cable Car",
+        Mode == "CR" ~ "Commuter Rail",
+        Mode == "DR" ~ "Demand Response",
+        Mode == "FB" ~ "Ferryboat",
+        Mode == "IP" ~ "Inclined Plane",
+        Mode == "LR" ~ "Light Rail",
+        Mode == "MB" ~ "Bus",
+        Mode == "MG" ~ "Monorail and Automated Guideway modes",
+        Mode == "PB" ~ "Publico",
+        Mode == "RB" ~ "Bus Rapid Transit",
+        Mode == "SR" ~ "Streetcar Rail",
+        Mode == "TB" ~ "Trolleybus",
+        Mode == "TR" ~ "Aerial Tramways",
+        Mode == "VP" ~ "Vanpool",
+        Mode == "YR" ~ "Hybrid Rail",
+        TRUE ~ "Unknown"))
+```
+Next, we download the 2023 Service by Agency report, from which we will extract characteristics of typical passenger trips on each transit service. We will also explore the data by answering some questions using the service data.
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# download the 2023 service by agency report
+library(readr)
+NTD_SERVICE_FILE <- file.path(DATA_DIR, "2023_service.csv")
+if(!file.exists(NTD_SERVICE_FILE)){
+    DS <- download.file("https://data.transportation.gov/resource/6y83-7vuw.csv", 
+                  destfile=NTD_SERVICE_FILE, 
+                  method="curl")
+    
+    if(DS | (file.info(NTD_SERVICE_FILE)$size == 0)){
+        cat("I was unable to download the NTD Service File. Please try again.\n")
+        stop("Download failed")
+    }
+}
+
+NTD_SERVICE_RAW <- read_csv(NTD_SERVICE_FILE)
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+#clean up the service data
+NTD_SERVICE <- NTD_SERVICE_RAW |>
+    mutate(`NTD ID` = as.numeric(`_5_digit_ntd_id`)) |> 
+    rename(Agency = agency, 
+           City   = max_city, 
+           State  = max_state,
+           UPT    = sum_unlinked_passenger_trips_upt, 
+           MILES  = sum_passenger_miles) |>
+    select(matches("^[A-Z]", ignore.case=FALSE)) |>
+    filter(MILES > 0)
+
+```
+## Explore NTD Service Data
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Which transit service has the most UPT annually?
+library(knitr)
+
+most_upt <- NTD_SERVICE |>
+  mutate(UPT = comma(UPT)) |>
+  slice_max(UPT, n = 1)
+
+kable(most_upt, caption = "Transit Service with the Most UPT Annually")
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# What is the average trip length of a trip on MTA NYC?
+mta_avg_trip <- NTD_SERVICE |>
+  filter(Agency == "MTA New York City Transit") |>
+  mutate(`MTA Average Trip Length` = MILES / UPT) |>
+  select(`NTD ID`, Agency, City, State, `MTA Average Trip Length`)
+
+kable(mta_avg_trip, caption = "Average Trip Length on MTA NYC")
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Which transit service in NYC has the longest average trip length?
+nyc_longest_trip <- NTD_SERVICE |>
+  filter(State == "NY", City == "New York" | City == "Brooklyn") |>
+  mutate(`Average Trip Length` = MILES / UPT) |>
+  slice_max(`Average Trip Length`, n = 1)
+
+kable(nyc_longest_trip, caption = "Transit Service in NYC with the Longest Average Trip Length")
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Which state has the fewest total miles travelled by public transit?
+state_fewest_miles <- NTD_SERVICE |>
+  group_by(State) |>
+  summarize(`Total Miles` = comma(sum(MILES, na.rm = TRUE))) |>
+  slice_min(`Total Miles`, n = 1)
+
+kable(state_fewest_miles, caption = "State with the Fewest Total Miles Travelled by Public Transit")
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Are all states represented in this data? If no, which ones are missing? The state.name and state.abb objects we used above may be useful here.
+states_missing <- EIA_SEP_REPORT |>
+  anti_join(NTD_SERVICE, join_by("abbreviation" == "State")) |>
+  rename(`Missing States` = state) |>
+  select(`Missing States`)
+
+kable(states_missing, caption = "Missing States")
+```
+
+## Analysis
+We’re now ready to start putting these datasets together and using them to identify America’s greenest transit agencies. 
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Task 5: join the three tables
+agency_mode_pair <- NTD_SERVICE |>
+  inner_join(NTD_ENERGY |>
+      select(-c(`Kerosene`, `Bunker Fuel`, `Ethanol`, `Methonal`)), #clean it up 
+    join_by("NTD ID" == "NTD ID")
+    ) |> 
+  inner_join(EIA_SEP_REPORT,
+    join_by(State == "abbreviation")
+    ) |>
+  select(-c(`Agency Name`, State)) |>
+  rename(
+    agency = `Agency`,
+    city = `City`,
+    mode = `Mode`,
+    upt = `UPT`,
+    miles = `MILES`,
+    ntd_id = `NTD ID`,
+    biodiesel = `Bio-Diesel`,
+    cnaturalgas = `C Natural Gas`,
+    diesel = `Diesel Fuel`,
+    gasoline = `Gasoline`,
+    liqnatgas = `Liquified Nat Gas`,
+    liqpetgas =`Liquified Petroleum Gas`,
+    electric_battery = `Electric Battery`,
+    electric_propulsion = `Electric Propulsion`,
+    co2_mwh = CO2_MWh
+    ) |>
+  mutate(
+    electricbattery_emission = electric_battery * (co2_mwh / 1000),
+    electricprop_emission = electric_propulsion * (co2_mwh / 1000),
+    total_emission = (
+        electricbattery_emission +
+        electricprop_emission
+      )
+  ) |>
+  group_by(ntd_id) |>
+  mutate(agency_total_emission = sum(total_emission)) |>
+  ungroup()
+
+# Task 6
+# use percentiles to define small, medium, and large agencies. 
+percentile_1 <- quantile(agency_mode_pair |> select(upt) |> unique() |> pull(upt), 0.3)
+percentile_2 <- quantile(agency_mode_pair |> select(upt) |> unique() |> pull(upt), 0.7)
+
+# updating agency_mode_pair with agency size
+# adding green level
+agency_mode_pair <-
+  agency_mode_pair |>
+  group_by(ntd_id) |>
+  mutate(
+    agency_emission_per_capita = sum(total_emission) / upt,
+    emission_per_transit = sum(total_emission) / miles,
+    green_level = agency_emission_per_capita * emission_per_transit,
+    size = case_when(
+      upt < percentile_1 ~ "Small",
+      upt >= percentile_1 & upt <= percentile_2 ~ "Medium",
+      upt > percentile_2 ~ "Large",
+    )
+    ) |>
+  ungroup()
+```
+Besed on our analysis, the Greenest Transit Agency award goes to **King County Metro** for large size, it goes to **Everett Transist** for medium size, and it goes to **RiverCities Transit** for small size.
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# grouping th data
+green_levels <-
+  agency_mode_pair |>
+  group_by(size, ntd_id) |>
+  summarize(
+    agency = first(agency),
+    city = first(city),
+    state = first(state),
+    green_level = first(green_level),
+    .groups = 'drop'
+  ) |>
+  ungroup()
+
+# Select the greenest agency in each size
+greenest_agency <-
+  green_levels |>
+  group_by(size) |>
+  slice(1) |>
+  select(agency, city, state)
+
+# Compute median green
+median_green <- green_levels |>
+  group_by(size) |>
+  summarise(median_green = median(green_level, na.rm = TRUE))
+
+# visualize greenest agenciies
+greenest_agency |>
+  left_join(median_green, join_by("size" == "size")) |>
+  select(agency, city, state) |>
+  kable(caption = "Greenest Transit Agency")
+```
+## Conclusion
+This press release announces the winners in each category. The greenest transit for large size agencies is King County Metro, in Seattle, Washington. For medium size agencies, Everett Transit in Everett, Washington is the greenest. The winner for small size agencies goes to RiverCities Transit from Longview, Washington.
