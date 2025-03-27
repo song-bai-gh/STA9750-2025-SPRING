@@ -11,10 +11,12 @@ website:
     background: primary
     search: false
     left:
-      - text: "Homepage"
+      - text: "MP 00"
         href: index.html
       - text: "MP 01"
         href: mp01.html
+      - text: "MP 02"
+        href: mp02.html
 format:
   html:
     theme: cerulean
