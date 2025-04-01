@@ -483,4 +483,7 @@ ggplot(most_emissions_avoided, aes(x = size, y = emission_avoided, fill = size))
   ) +
   theme_minimal()
 
+# Save the plot as a PNG file
+ggsave("my_plot.png", plot = last_plot(), width = 8, height = 5)
+
 ```
