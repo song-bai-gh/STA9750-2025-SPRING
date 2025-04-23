@@ -405,3 +405,57 @@ worst_green_agency <- highest_electrification |>
   slice_max(total_co2_emissions,n=1)|>
   select(size,agency.x,City.x,state.x,total_co2_emissions) |>
   unique()
+
+# visualization
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Example data 
+greenest_agencies <- data.frame(
+  size = c('Small', 'Medium', 'Large'),
+  agency = c('Agency A', 'Agency B', 'Agency C'),
+  City = c('City X', 'City Y', 'City Z'),
+  state = c('State 1', 'State 2', 'State 3'),
+  per_pm_mg = c(0.025, 0.013, 0.000)
+)
+
+# Create the bar plot
+ggplot(greenest_agencies, aes(x = size, y = per_pm_mg, fill = size)) +
+  geom_bar(stat = 'identity', show.legend = FALSE) +
+  geom_text(aes(label = round(per_pm_mg, 3)), vjust = -0.3, size = 5) +
+  scale_fill_brewer(palette = "Greens") +
+  labs(
+    title = 'Greenest Agencies by Size',
+    x = 'Agency Size',
+    y = 'Green Score (per pm mg)'
+  ) +
+  theme_minimal()
+
+#another vis
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+
+# Here is a sample structure
+most_emissions_avoided <- data.frame(
+  size = c('Small', 'Medium', 'Large'),
+  agency = c('Agency A', 'Agency B', 'Agency C'),
+  City = c('City X', 'City Y', 'City Z'),
+  state = c('State 1', 'State 2', 'State 3'),
+  emission_avoided = c(11000000, 17000000, 2523000000)
+)
+
+# Create a bar plot for the most emissions avoided by agency size
+ggplot(most_emissions_avoided, aes(x = size, y = emission_avoided, fill = size)) +
+  geom_bar(stat = 'identity', show.legend = FALSE) +
+  geom_text(aes(label = round(emission_avoided, 0)), vjust = -0.3, size = 5) +
+  scale_fill_brewer(palette = "Blues") +
+  labs(
+    title = 'Most Emissions Avoided by Agencies',
+    x = 'Agency Size',
+    y = 'Emissions Avoided (in units)'
+  ) +
+  theme_minimal()
+
