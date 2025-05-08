@@ -1,0 +1,429 @@
+---
+title: "Exploring Recent US Political Shifts"
+
+format:
+  html:
+    code-fold: true
+    toc: true
+    toc-location: right
+    toc-depth: 5
+---
+
+```{r, warning=FALSE, message=FALSE, include=FALSE}
+
+## Task 1: US County Shapefiles
+
+# Set directory and file paths
+dir_path <- "data/mp04"
+zip_url <- "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_us_county_500k.zip"
+zip_file <- file.path(dir_path, "cb_2023_us_county_500k.zip")
+
+# Create directory if it doesn't exist
+if (!dir.exists(dir_path)) {
+  dir.create(dir_path, recursive = TRUE)
+}
+
+# Download the zip file if it doesn't already exist
+if (!file.exists(zip_file)) {
+  message("Downloading shapefile...")
+  download.file(zip_url, destfile = zip_file, mode = "wb")
+} else {
+  message("Shapefile zip already exists. Skipping download.")
+}
+
+# Unzip the file if shapefile components are not yet extracted
+shapefile_base <- file.path(dir_path, "cb_2023_us_county_500k")
+if (!file.exists(paste0(shapefile_base, ".shp"))) {
+  message("Extracting shapefile...")
+  unzip(zip_file, exdir = dir_path)
+} else {
+  message("Shapefile already extracted. Skipping unzip.")
+}
+
+## Task 2: Acquire 2024 US Presidential Election Results
+
+# install.packages(c("httr2", "rvest", "dplyr", "stringr", "readr", "purrr", "fs"))
+library(httr2)
+library(rvest)
+library(dplyr)
+library(stringr)
+library(readr)
+library(purrr)
+library(fs)
+
+get_2024_election_results <- function(state) {
+  # Create safe directory
+  dir_create("data/elections_2024")
+  
+  # Format Wikipedia URL part
+  state_url <- str_replace_all(state, " ", "_")
+  url_path <- paste0("wiki/2024_United_States_presidential_election_in_", state_url)
+  full_url <- paste0("https://en.wikipedia.org/wiki/", url_path)
+  
+  # Cached file path
+  local_file <- file.path("data/elections_2024", paste0(state, ".html"))
+  
+  # Download and cache page
+  if (!file_exists(local_file)) {
+    message("Downloading page for ", state)
+    resp <- request("https://en.wikipedia.org/") |>
+      req_url_path(url_path) |>
+      req_perform()
+    writeBin(resp_body_raw(resp), local_file)
+  } else {
+    message("Using cached page for ", state)
+  }
+  
+  # Parse HTML
+  page <- read_html(local_file)
+  tables <- html_elements(page, "table")
+  df_list <- lapply(tables, html_table, fill = TRUE)
+  
+  # Define possible headers that indicate a county-level results table
+  county_keywords <- c("county", "parish", "borough", "municipality")
+  
+  # Find correct table
+  selected_table <- NULL
+  for (df in df_list) {
+    headers <- tolower(names(df))
+    if (any(str_detect(headers, str_c(county_keywords, collapse = "|")))) {
+      selected_table <- df
+      break
+    }
+  }
+  
+  if (is.null(selected_table)) {
+    warning("No county-level table found for: ", state)
+    return(NULL)
+  }
+  
+  # Clean up the selected table
+  names(selected_table) <- names(selected_table) |>
+    str_replace_all("\\[.*?\\]", "") |>
+    make.unique()
+  cleaned <- selected_table |>
+    mutate(state = state)
+  
+  
+  return(cleaned)
+}
+
+states <- state.name
+results_list_2024 <- map(states, safely(get_2024_election_results))
+
+## Task 3: Acquire 2020 US Presidential Election Results
+
+get_2020_election_results <- function(state) {
+  # Create safe directory
+  dir_create("data/elections_2020")
+  
+  # Format Wikipedia URL part
+  state_url <- str_replace_all(state, " ", "_")
+  url_path <- paste0("wiki/2020_United_States_presidential_election_in_", state_url)
+  full_url <- paste0("https://en.wikipedia.org/", url_path)
+  
+  # Cached file path
+  local_file <- file.path("data/elections_2020", paste0(state, ".html"))
+  
+  # Download and cache page
+  if (!file_exists(local_file)) {
+    message("Downloading page for ", state)
+    resp <- request("https://en.wikipedia.org/") |>
+      req_url_path(url_path) |>
+      req_perform()
+    writeBin(resp_body_raw(resp), local_file)
+  } else {
+    message("Using cached page for ", state)
+  }
+  
+  # Parse HTML
+  page <- read_html(local_file)
+  tables <- html_elements(page, "table")
+  df_list <- lapply(tables, html_table, fill = TRUE)
+  
+  # Define possible headers that indicate a county-level results table
+  county_keywords <- c("county", "parish", "borough", "municipality")
+  
+  # Find correct table
+  selected_table <- NULL
+  for (df in df_list) {
+    headers <- tolower(names(df))
+    if (any(str_detect(headers, str_c(county_keywords, collapse = "|")))) {
+      selected_table <- df
+      break
+    }
+  }
+  
+  if (is.null(selected_table)) {
+    warning("No county-level table found for: ", state)
+    return(NULL)
+  }
+  
+  # Clean up the selected table
+  names(selected_table) <- names(selected_table) |>
+    str_replace_all("\\[.*?\\]", "") |>
+    make.unique()
+  cleaned <- selected_table |>
+    mutate(state = state)
+  
+  return(cleaned)
+}
+
+# Example usage
+states <- state.name
+results_list_2020 <- map(states, safely(get_2020_election_results))
+
+## Task 4: Initial Analysis Questions
+
+library(sf)
+
+# Read the shapefile
+county_shapes <- st_read(paste0(shapefile_base, ".shp"))
+
+# Keep only relevant columns for joining
+county_shapes <- county_shapes |>
+  select(GEOID, NAME, STATEFP, geometry)
+
+# Extract and bind 2020 results
+valid_2020 <- results_list_2020 |> keep(~ !is.null(.x$result)) |> map("result")
+election_2020_df <- bind_rows(valid_2020)
+
+# Extract and bind 2024 results
+valid_2024 <- results_list_2024 |> keep(~ !is.null(.x$result)) |> map("result")
+election_2024_df <- bind_rows(valid_2024)
+
+# Helper function to clean names
+clean_name <- function(x) {
+  x |> tolower() |> str_replace_all("[^a-z]", "")
+}
+
+# Prepare election data with cleaned keys
+county_col_2020 <- names(election_2020_df)[1]
+
+election_2020_df <- election_2020_df |>
+  mutate(county_clean = clean_name(.data[[county_col_2020]]),
+         state_clean = clean_name(state))
+
+county_col_2024 <- names(election_2024_df)[1]
+
+election_2024_df <- election_2024_df |>
+  mutate(county_clean = clean_name(.data[[county_col_2024]]),
+         state_clean = clean_name(state))
+
+# Prepare shapefile data with cleaned keys
+county_shapes <- county_shapes |>
+  mutate(county_clean = clean_name(NAME),
+         state_clean = clean_name(state.name[as.integer(STATEFP)]))  # converts STATEFP to full name
+
+# Join with 2020
+joined_2020 <- left_join(county_shapes, election_2020_df,
+                         by = c("county_clean", "state_clean"))
+
+# Join with 2024
+joined_all <- left_join(joined_2020, election_2024_df,
+                        by = c("county_clean", "state_clean"),
+                        suffix = c("_2020", "_2024"))
+
+# 1.Which county or counties cast the most votes for Trump (in absolute terms) in 2024?
+#names(joined_all)
+joined_all <- joined_all |>
+  mutate(trump_votes_2024 = parse_number(`Donald TrumpRepublican_2024`))
+top_trump_county <- joined_all |>
+  slice_max(trump_votes_2024) |>
+  select(NAME, state_clean, trump_votes_2024)
+
+# 2.Which county or counties cast the most votes for Biden (as a fraction of total votes cast) in 2020?
+joined_all <- joined_all |>
+  mutate(
+    biden_votes_2020 = parse_number(`Joe BidenDemocratic.1`)
+    )
+top_biden_county <- joined_all |>
+  slice_max(biden_votes_2020) |>
+  select(NAME, state_clean, biden_votes_2020)
+
+# 3.Which county or counties had the largest shift towards Trump (in absolute terms) in 2024?
+joined_all <- joined_all |>
+  mutate(
+    trump_votes_2020 = parse_number(`Donald TrumpRepublican_2020`)
+  )
+# the change in vote count for Trump from 2020 to 2024 in each county
+joined_all <- joined_all |>
+  mutate(
+    trump_vote_shift = trump_votes_2024 - trump_votes_2020
+  )
+# Identify the County with the Largest Increase
+largest_shift_county <- joined_all |>
+  slice_max(trump_vote_shift) |>
+  select(NAME, state_clean, trump_votes_2020, trump_votes_2024, trump_vote_shift)
+
+# 4. Which state had the smallest shift towards Trump in 2024?
+# Group by the cleaned state name and sum Trump votes for both years:
+state_shifts <- joined_all |>
+  group_by(state_clean) |>
+  summarise(
+    trump_2020 = sum(trump_votes_2020, na.rm = TRUE),
+    trump_2024 = sum(trump_votes_2024, na.rm = TRUE),
+    shift = trump_2024 - trump_2020
+  )
+#finding the smallest (most negative or least positive) value of shift:
+smallest_shift_state <- state_shifts |>
+  slice_min(shift)
+
+# 5. What is the largest county, by area, in this data set?
+# To accurately calculate area, reproject to an equal-area CRS like EPSG: 5070 (USA Contiguous Albers Equal Area):
+joined_proj <- st_transform(joined_all, crs = 5070)
+
+# Find the maximum area and Get the largest county
+joined_proj <- joined_proj |>
+  mutate(area_km2 = as.numeric(st_area(geometry)) / 1e6)
+
+largest_county <- joined_proj |>
+  slice_max(area_km2) |>
+  select(NAME, state_clean, area_km2)
+
+# 6.Which county has the highest voter density (voters per unit of area) in 2020?
+# Total votes cast in 2020 per county
+joined_all <- joined_all |>
+  mutate(
+    biden_2020 = parse_number(`Joe BidenDemocratic`),
+    total_votes_2020 = biden_2020 + trump_votes_2020
+  )
+#Use an equal-area CRS EPSG: 5070 for accurate measurement:
+library(sf)
+
+joined_proj <- st_transform(joined_all, crs = 5070)
+
+joined_proj <- joined_proj |>
+  mutate(
+    area_km2 = as.numeric(st_area(geometry)) / 1e6  # convert from m² to km²
+  )
+# Calculate Voter Density
+joined_proj <- joined_proj |>
+  mutate(
+    voter_density_2020 = total_votes_2020 / area_km2
+  )
+#Find County with Highest Voter Density
+highest_density_county <- joined_proj |>
+  slice_max(voter_density_2020) |>
+  select(NAME, state_clean, total_votes_2020, area_km2, voter_density_2020)
+
+# 7.Which county had the largest increase in voter turnout in 2024?
+# calculate total votes for 2020 and 2024 per county:
+library(dplyr)
+library(readr)
+
+joined_all <- joined_all |>
+  mutate(
+    kamala_2024 = parse_number(`Kamala HarrisDemocratic`),
+    total_votes_2024 = kamala_2024 + trump_votes_2024
+  )
+#Compute the Turnout Change
+joined_all <- joined_all |>
+  mutate(
+    turnout_increase = total_votes_2024 - total_votes_2020
+  )
+#Identify the County with the Largest Increase
+largest_turnout_county <- joined_all |>
+  slice_max(turnout_increase) |>
+  select(NAME, state_clean, total_votes_2020, total_votes_2024, turnout_increase)
+
+#task 5
+# Compute the shift (as a percentage of votes cast) rightwards for each county.
+#Compute the percentage of votes Trump received in both elections:
+library(dplyr)
+
+joined_all <- joined_all |>
+  mutate(
+    trump_pct_2020 = trump_votes_2020 / total_votes_2020,
+    trump_pct_2024 = trump_votes_2024 / total_votes_2024
+  )
+#Calculate the change in Trump's vote percentage from 2020 to 2024:
+joined_all <- joined_all |>
+  mutate(
+    rightward_shift = trump_pct_2024 - trump_pct_2020
+  )
+
+# 
+library(sf)
+library(ggplot2)
+library(dplyr)
+
+# Use Albers Equal Area projection (like NYT)
+proj_crs <- 2163
+joined_all <- st_transform(joined_all, proj_crs)
+
+# Compute centroids
+joined_all <- joined_all %>%
+  mutate(centroid = st_centroid(geometry)) %>%
+  mutate(
+    x = st_coordinates(centroid)[, 1],
+    y = st_coordinates(centroid)[, 2]
+  )
+
+# Set arrow scale — adjust to taste
+arrow_scale <- 10000000  # shorter arrows
+
+# Direction + scaled endpoints
+joined_all <- joined_all %>%
+  mutate(
+    shift_direction = ifelse(rightward_shift > 0, "Right", "Left"),
+    shift_length = abs(rightward_shift) * arrow_scale,
+    xend = x + ifelse(rightward_shift > 0, shift_length, -shift_length),
+    yend = y
+  )
+
+states <- joined_all %>%
+  group_by(STATEFP, state_clean) %>%
+  summarize(geometry = st_union(geometry), .groups = "drop")
+
+# Reposition Alaska and Hawaii
+scale_and_shift <- function(sf_obj, scale = 1, shift = c(0, 0)) {
+  geom <- st_geometry(sf_obj)
+  center <- st_centroid(st_union(geom))
+  new_geom <- (geom - center) * scale + center + shift
+  st_geometry(sf_obj) <- st_sfc(new_geom, crs = st_crs(sf_obj))
+  sf_obj
+}
+
+alaska <- states %>% filter(STATEFP == "02") %>%
+  scale_and_shift(scale = 0.35, shift = c(1300000, -5000000))
+hawaii <- states %>% filter(STATEFP == "15") %>%
+  scale_and_shift(scale = 1, shift = c(5200000, -1400000))
+mainland <- states %>% filter(!STATEFP %in% c("02", "15"))
+
+states_transformed <- bind_rows(mainland, alaska, hawaii)
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+ggplot() +
+  # Background state outlines
+  geom_sf(data = states_transformed, fill = "gray98", color = "gray80", size = 0.2) +
+  
+  # Arrows for vote shifts
+  geom_segment(
+    data = joined_all,
+    aes(x = x, y = y, xend = xend, yend = yend, color = shift_direction),
+    arrow = arrow(type = "closed", length = unit(0.06, "inches")),
+    linewidth = 0.25,
+    alpha = 0.9
+  ) +
+  
+  # NYT-style red/blue
+  scale_color_manual(values = c("Right" = "#c40000", "Left" = "#0050d0")) +
+  
+  # Clean theme
+  theme_void() +
+  theme(
+    legend.position = "none",
+    plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  
+  # 🔍 Zoom in on the US region (EPSG:2163)
+  coord_sf(
+    xlim = c(-2500000, 3000000),
+    ylim = c(-2700000, 1000000),
+    expand = FALSE,
+    datum = NA
+  )
+```
