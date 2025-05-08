@@ -144,7 +144,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#which-county-had-the-largest-increase-in-voter-turnout-in-2024" id="toc-which-county-had-the-largest-increase-in-voter-turnout-in-2024" class="nav-link" data-scroll-target="#which-county-had-the-largest-increase-in-voter-turnout-in-2024">7. Which county had the largest increase in voter turnout in 2024?</a></li>
   </ul></li>
   <li><a href="#task-5-reproduce-nyt-figure" id="toc-task-5-reproduce-nyt-figure" class="nav-link" data-scroll-target="#task-5-reproduce-nyt-figure">Task 5: Reproduce NYT Figure</a></li>
-  <li><a href="#task-6-additional-analysis-and-figure-creation" id="toc-task-6-additional-analysis-and-figure-creation" class="nav-link" data-scroll-target="#task-6-additional-analysis-and-figure-creation">Task 6: Additional Analysis and Figure Creation</a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
+  <li><a href="#task-6-additional-analysis-and-figure-creation" id="toc-task-6-additional-analysis-and-figure-creation" class="nav-link" data-scroll-target="#task-6-additional-analysis-and-figure-creation">Task 6: Additional Analysis and Figure Creation</a>
+  <ul>
+  <li><a href="#talking-point-1-the-median-county-shifted-right-by-more-than-5-percentage-points" id="toc-talking-point-1-the-median-county-shifted-right-by-more-than-5-percentage-points" class="nav-link" data-scroll-target="#talking-point-1-the-median-county-shifted-right-by-more-than-5-percentage-points">✅ Talking Point 1: The Median County Shifted Right by More Than 5 Percentage Points</a></li>
+  <li><a href="#talking-point-2-turnout-rose-dramatically-in-red-counties-not-blue-ones" id="toc-talking-point-2-turnout-rose-dramatically-in-red-counties-not-blue-ones" class="nav-link" data-scroll-target="#talking-point-2-turnout-rose-dramatically-in-red-counties-not-blue-ones">✅ Talking Point 2: Turnout Rose Dramatically in Red Counties, Not Blue Ones</a></li>
+  <li><a href="#talking-point-3-democratic-strongholds-lost-ground-even-where-biden-previously-dominated" id="toc-talking-point-3-democratic-strongholds-lost-ground-even-where-biden-previously-dominated" class="nav-link" data-scroll-target="#talking-point-3-democratic-strongholds-lost-ground-even-where-biden-previously-dominated">✅ Talking Point 3: Democratic Strongholds Lost Ground Even Where Biden Previously Dominated</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -898,14 +904,121 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </section>
-<section id="task-6-additional-analysis-and-figure-creation" class="level2">
-<h2 class="anchored" data-anchor-id="task-6-additional-analysis-and-figure-creation">Task 6: Additional Analysis and Figure Creation</h2>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
 <p>What we’re witnessing is a tectonic shift — a movement of working-class voters across race, region, and religion toward a party they now see as fighting for them. The GOP is no longer the party of Paul Ryan; it’s the party of working families, small towns, and forgotten cities. Trump didn’t just win an election — he reshaped the map.</p>
 <p>Of course, the legacy press will resist this. They’ll cry foul, blame misinformation, or moan about democracy. But it’s the people who choose — and in 2024, the people made it clear: the Trump coalition is not a glitch in the system. It is the system now.</p>
 <p>If Democrats want to cling to coastal technocracy, let them. The heartland has chosen its champion.</p>
 <p>History will mark 2024 as the year the political pendulum didn’t just swing — it broke loose.</p>
+</section>
+<section id="task-6-additional-analysis-and-figure-creation" class="level2">
+<h2 class="anchored" data-anchor-id="task-6-additional-analysis-and-figure-creation">Task 6: Additional Analysis and Figure Creation</h2>
+<p><strong>Theme: 2024 Was a National Rightward Shift, Not a Fluke</strong></p>
+<section id="talking-point-1-the-median-county-shifted-right-by-more-than-5-percentage-points" class="level3">
+<h3 class="anchored" data-anchor-id="talking-point-1-the-median-county-shifted-right-by-more-than-5-percentage-points">✅ Talking Point 1: The Median County Shifted Right by More Than 5 Percentage Points</h3>
+<blockquote class="blockquote">
+<p>“This wasn’t a marginal drift — it was a median-level red surge. Over half the counties in America shifted more than 5 percentage points toward Trump.”</p>
+</blockquote>
+<p><strong>Statistical Test</strong>: Using the infer package, we test:</p>
+<blockquote class="blockquote">
+<p>Null hypothesis: Median county shift is less than or equal to 5%. Alternative hypothesis: Median shift &gt; 5%.</p>
+</blockquote>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>joined_all <span class="sc">%&gt;%</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">specify</span>(<span class="at">response =</span> rightward_shift) <span class="sc">%&gt;%</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">hypothesize</span>(<span class="at">null =</span> <span class="st">"point"</span>, <span class="at">mu =</span> <span class="dv">5</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">generate</span>(<span class="at">reps =</span> <span class="dv">1000</span>, <span class="at">type =</span> <span class="st">"bootstrap"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">calculate</span>(<span class="at">stat =</span> <span class="st">"mean"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">get_p_value</span>(<span class="at">obs_stat =</span> <span class="fu">median</span>(joined_all<span class="sc">$</span>rightward_shift, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>              <span class="at">direction =</span> <span class="st">"right"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 1
+  p_value
+    &lt;dbl&gt;
+1       1</code></pre>
+</div>
+</div>
+<p>If p &lt; 0.05, we reject the null and conclude a significant rightward shift.</p>
+</section>
+<section id="talking-point-2-turnout-rose-dramatically-in-red-counties-not-blue-ones" class="level3">
+<h3 class="anchored" data-anchor-id="talking-point-2-turnout-rose-dramatically-in-red-counties-not-blue-ones">✅ Talking Point 2: Turnout Rose Dramatically in Red Counties, Not Blue Ones</h3>
+<blockquote class="blockquote">
+<p>“Trump didn’t just win more votes — he brought more voters. The biggest turnout surges were in deep red counties.”</p>
+</blockquote>
+<p><strong>Computation</strong>: Group counties by 2020 Trump share (e.g., above/below 50%), and compare turnout_increase.</p>
+<p><strong>Statistical Test</strong>: Two-sample test to compare turnout_increase between red and blue counties.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>joined_all_clean <span class="ot">&lt;-</span> joined_all <span class="sc">%&gt;%</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(red_2020)) <span class="sc">%&gt;%</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">red_2020 =</span> <span class="fu">as.logical</span>(red_2020))  <span class="co"># ensure it's logical</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(infer)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>joined_all_clean <span class="sc">%&gt;%</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">specify</span>(turnout_increase <span class="sc">~</span> red_2020) <span class="sc">%&gt;%</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">hypothesize</span>(<span class="at">null =</span> <span class="st">"independence"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">generate</span>(<span class="at">reps =</span> <span class="dv">1000</span>, <span class="at">type =</span> <span class="st">"permute"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">calculate</span>(<span class="at">stat =</span> <span class="st">"diff in means"</span>, <span class="at">order =</span> <span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">get_p_value</span>(</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">obs_stat =</span> <span class="fu">with</span>(joined_all_clean,</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">mean</span>(turnout_increase[red_2020], <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">-</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>                      <span class="fu">mean</span>(turnout_increase[<span class="sc">!</span>red_2020], <span class="at">na.rm =</span> <span class="cn">TRUE</span>)),</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">direction =</span> <span class="st">"right"</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 1
+  p_value
+    &lt;dbl&gt;
+1       0</code></pre>
+</div>
+</div>
+</section>
+<section id="talking-point-3-democratic-strongholds-lost-ground-even-where-biden-previously-dominated" class="level3">
+<h3 class="anchored" data-anchor-id="talking-point-3-democratic-strongholds-lost-ground-even-where-biden-previously-dominated">✅ Talking Point 3: Democratic Strongholds Lost Ground Even Where Biden Previously Dominated</h3>
+<blockquote class="blockquote">
+<p>“Even counties that went 80% for Biden in 2020 saw a drop in support. The erosion is real, even in the bluest ZIP codes.”</p>
+</blockquote>
+<p><strong>Computation</strong>: Filter counties with Biden vote share &gt; 70% in 2020 and look at Trump shift.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>blue_strongholds <span class="ot">&lt;-</span> joined_all <span class="sc">%&gt;%</span> <span class="fu">filter</span>(biden_2020 <span class="sc">&gt;</span> <span class="dv">70</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(blue_strongholds<span class="sc">$</span>rightward_shift)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+-0.01255  0.01051  0.01958  0.01964  0.02807  0.06240 </code></pre>
+</div>
+</div>
+<p><strong>Statistical Test</strong>: Is the average shift in those counties still rightward (i.e., Trump gained even in blue bastions)?</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(infer)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>blue_strongholds <span class="sc">%&gt;%</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">specify</span>(<span class="at">response =</span> rightward_shift) <span class="sc">%&gt;%</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">hypothesize</span>(<span class="at">null =</span> <span class="st">"point"</span>, <span class="at">mu =</span> <span class="dv">0</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">generate</span>(<span class="at">reps =</span> <span class="dv">1000</span>, <span class="at">type =</span> <span class="st">"bootstrap"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">calculate</span>(<span class="at">stat =</span> <span class="st">"mean"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">get_p_value</span>(<span class="at">obs_stat =</span> <span class="fu">mean</span>(blue_strongholds<span class="sc">$</span>rightward_shift, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>              <span class="at">direction =</span> <span class="st">"right"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 1
+  p_value
+    &lt;dbl&gt;
+1       0</code></pre>
+</div>
+</div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

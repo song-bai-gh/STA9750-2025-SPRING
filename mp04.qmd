@@ -531,7 +531,8 @@ ggplot() +
 
 ```
 
-## Task 6: Additional Analysis and Figure Creation
+## Conclusion
+
 What we’re witnessing is a tectonic shift — a movement of working-class voters across race, region, and religion toward a party they now see as fighting for them. The GOP is no longer the party of Paul Ryan; it’s the party of working families, small towns, and forgotten cities. Trump didn’t just win an election — he reshaped the map.
 
 Of course, the legacy press will resist this. They’ll cry foul, blame misinformation, or moan about democracy. But it’s the people who choose — and in 2024, the people made it clear: the Trump coalition is not a glitch in the system. It is the system now.
@@ -539,3 +540,96 @@ Of course, the legacy press will resist this. They’ll cry foul, blame misinfor
 If Democrats want to cling to coastal technocracy, let them. The heartland has chosen its champion.
 
 History will mark 2024 as the year the political pendulum didn’t just swing — it broke loose.
+
+## Task 6: Additional Analysis and Figure Creation
+
+**Theme: 2024 Was a National Rightward Shift, Not a Fluke**
+
+### ✅ Talking Point 1: The Median County Shifted Right by More Than 5 Percentage Points
+
+> “This wasn’t a marginal drift — it was a median-level red surge. Over half the counties in America shifted more than 5 percentage points toward Trump.”
+
+**Statistical Test**:
+Using the infer package, we test:
+
+> Null hypothesis: Median county shift is less than or equal to 5%. Alternative hypothesis: Median shift > 5%.
+
+```{r, warning=FALSE, message=FALSE, include=FALSE}
+library(infer)
+library(tibble)
+
+as_tibble(st_drop_geometry(joined_all))
+```
+
+```{r, warning=FALSE, message=FALSE}
+joined_all %>%
+  specify(response = rightward_shift) %>%
+  hypothesize(null = "point", mu = 5) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "mean") %>%
+  get_p_value(obs_stat = median(joined_all$rightward_shift, na.rm = TRUE),
+              direction = "right")
+
+```
+If p < 0.05, we reject the null and conclude a significant rightward shift.
+
+### ✅ Talking Point 2: Turnout Rose Dramatically in Red Counties, Not Blue Ones
+
+> “Trump didn’t just win more votes — he brought more voters. The biggest turnout surges were in deep red counties.”
+
+**Computation**:
+Group counties by 2020 Trump share (e.g., above/below 50%), and compare turnout_increase.
+```{r, warning=FALSE, message=FALSE, include=FALSE}
+joined_all <- joined_all %>%
+  mutate(red_2020 = trump_pct_2020 > 0.5)
+
+library(dplyr)
+joined_all %>%
+  group_by(red_2020) %>%
+  summarize(median_turnout_increase = median(turnout_increase, na.rm = TRUE))
+```
+**Statistical Test**:
+Two-sample test to compare turnout_increase between red and blue counties.
+```{r, warning=FALSE, message=FALSE}
+joined_all_clean <- joined_all %>%
+  filter(!is.na(red_2020)) %>%
+  mutate(red_2020 = as.logical(red_2020))  # ensure it's logical
+
+library(infer)
+
+joined_all_clean %>%
+  specify(turnout_increase ~ red_2020) %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in means", order = c(TRUE, FALSE)) %>%
+  get_p_value(
+    obs_stat = with(joined_all_clean,
+                    mean(turnout_increase[red_2020], na.rm = TRUE) -
+                      mean(turnout_increase[!red_2020], na.rm = TRUE)),
+    direction = "right"
+  )
+
+```
+
+### ✅ Talking Point 3: Democratic Strongholds Lost Ground Even Where Biden Previously Dominated
+
+> “Even counties that went 80% for Biden in 2020 saw a drop in support. The erosion is real, even in the bluest ZIP codes.”
+
+**Computation**:
+Filter counties with Biden vote share > 70% in 2020 and look at Trump shift.
+```{r, warning=FALSE, message=FALSE}
+blue_strongholds <- joined_all %>% filter(biden_2020 > 70)
+summary(blue_strongholds$rightward_shift)
+```
+**Statistical Test**:
+Is the average shift in those counties still rightward (i.e., Trump gained even in blue bastions)?
+```{r, warning=FALSE, message=FALSE}
+library(infer)
+blue_strongholds %>%
+  specify(response = rightward_shift) %>%
+  hypothesize(null = "point", mu = 0) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "mean") %>%
+  get_p_value(obs_stat = mean(blue_strongholds$rightward_shift, na.rm = TRUE),
+              direction = "right")
+```
