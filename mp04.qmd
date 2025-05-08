@@ -573,6 +573,21 @@ joined_all %>%
 ```
 If p < 0.05, we reject the null and conclude a significant rightward shift.
 
+**🎯 Plot: Histogram of county-level shift**
+
+```{r, warning=FALSE, message=FALSE}
+joined_all %>%
+  ggplot(aes(x = rightward_shift)) +
+  geom_histogram(binwidth = 1, fill = "pink", color = "white", alpha = 0.8) +
+  geom_vline(aes(xintercept = median(rightward_shift, na.rm = TRUE)), color = "black", linetype = "dashed") +
+  labs(
+    title = "Rightward Shift in 2024",
+    subtitle = "Distribution of county-level partisan shifts",
+    x = "Trump % (2024) − Trump % (2020)",
+    y = "Number of Counties"
+  ) +
+  theme_minimal()
+```
 ### ✅ Talking Point 2: Turnout Rose Dramatically in Red Counties, Not Blue Ones
 
 > “Trump didn’t just win more votes — he brought more voters. The biggest turnout surges were in deep red counties.”
@@ -610,7 +625,23 @@ joined_all_clean %>%
   )
 
 ```
+**🎯 Plot: Boxplot of turnout change by 2020 partisan alignment**
 
+```{r, warning=FALSE, message=FALSE}
+joined_all %>%
+  filter(!is.na(red_2020)) %>%
+  ggplot(aes(x = as.factor(red_2020), y = turnout_increase, fill = red_2020)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +
+  scale_fill_manual(values = c("blue", "red"), labels = c("Biden 2020", "Trump 2020")) +
+  labs(
+    title = "Turnout Change from 2020 to 2024",
+    subtitle = "Trump counties retained more of their voters",
+    x = "2020 Winner",
+    y = "Turnout Increase (2024 vs 2020)"
+  ) +
+  theme_minimal()
+
+```
 ### ✅ Talking Point 3: Democratic Strongholds Lost Ground Even Where Biden Previously Dominated
 
 > “Even counties that went 80% for Biden in 2020 saw a drop in support. The erosion is real, even in the bluest ZIP codes.”
@@ -632,4 +663,26 @@ blue_strongholds %>%
   calculate(stat = "mean") %>%
   get_p_value(obs_stat = mean(blue_strongholds$rightward_shift, na.rm = TRUE),
               direction = "right")
+```
+
+**🎯 Plot: Bar plot of top counties by vote gain**
+```{r, warning=FALSE, message=FALSE}
+joined_all %>%
+  mutate(winner_2020 = ifelse(trump_pct_2020 > 0.5, "Trump", "Biden")) %>%
+  group_by(NAME, state_clean, winner_2020) %>%
+  mutate(vote_gain = total_votes_2024 - total_votes_2020) %>%
+  ungroup() %>%
+  filter(!is.na(vote_gain)) %>%
+  slice_max(order_by = vote_gain, n = 10) %>%
+  ggplot(aes(x = reorder(NAME, vote_gain), y = vote_gain, fill = winner_2020)) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_manual(values = c("Biden" = "blue", "Trump" = "red")) +
+  labs(
+    title = "Top 10 Counties by Raw Vote Increase",
+    subtitle = "Most top-gainers were Trump-aligned in 2020",
+    x = "County",
+    y = "Net Vote Gain (2024 vs 2020)"
+  ) +
+  theme_minimal()
 ```
