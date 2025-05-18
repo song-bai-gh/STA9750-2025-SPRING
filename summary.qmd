@@ -1,0 +1,58 @@
+---
+title: "Final Summary Report"
+author: "AI Impact Collective"
+format: 
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+---
+
+## "How will jobs be affected by AI"
+
+Have you ever watched a video that a father sits in a couch playing with his kids. Then, a line shows up saying "You may be replaced by AI at work, but never at home". That video aimed to encourage people to share more time with their family which was great. But if thinking closely, you might ask "How would I even afford a home if I was replaced at work"? This really spoils the touching moment. Now, you are probably eager to know if you will be repalced by AI at work. For a wider range of audiences, that question becomes "How will jobs be affected by AI"?
+
+We intended to collect data about the AI impact on employment and come up with findings based on the analysis of the data. The analysis will help us understand how the labour market will change during the next decade. If your job is "AI Enhanced", then you don't need to worry at all. Oppositely, you should be thankful for the age of AI. If your job is "Safe", you could think that as you would not lose your job, but you might want to learn some new skills to be more adaptive to automation. If your job is "At Risk", there is a high probability that you will be replaced by AI. You could plan on changing to another job which is not risky and preparing early so that you would survive in the end. It could be a good thing if you got prepared for an enhanced job bofore you were replaced because normally you would get a much higher salary from an "AI Enhanced" occupation than that from an "At Risk" one. 
+
+Therefore, our analysis matters to everybody. It is important either for you to prepare early if you have a job right now, or for you to plan on which job to do in the future if you are about to enter the job market.
+
+## Specific Analyses
+
+To better answer the motivating question, we were trying to answer three specific questions first using our combined dataset. The first specific question is "What job titles and industries have the highest AI Workload Ratio and how will it affect the job market"? AI Workload Ratio is a computed value by dividing the number of human-performed tasks by the number of AI models associated with each job title. It represents how dependent a job role is on AI implementation. Job titles and industries with the highest ratio are least dependent on AI, which means tasks in these fields are most done by human-beings compared to other fields. At least, there is no sign of completely replacing by AI or these jobs are harder to be replaced. 
+
+The second question is "How does the AI Impact ratio correlate with the number of tasks performed and the education level associated with different job titles"? The AI Impact ratio represents AI's influence on each job title. By comparing the impact ratio and the number of AI-performed tasks, we can verify if one job role is really affected by AI and replaceable. The correlation can show the relationship between the AI impact and the number of AI-performed tasks associated with all job roles. The result will tell us whether a job with high AI impact has many of its tasks done by AI models.
+
+The third question is "Is there a relationship between AI Impact and projected employment growth by occupation, and what does it reveal about the future of work"? An occupation with high projected employment growth and high AI Impact could be considered as "AI Enhanced". An occupation with low or negative employment growth and high AI Impact might be "At Risk". Other jobs could be "Safe" in the following ten years. If there a strong relationship between AI Impact and projected employment growth, either positive or negative, our job market will be affected significantly by AI. 
+
+## Data Sources
+
+We selected two data sources for our analyses. One is "AI Exposure Dataset", which estimates the proportion of work tasks within each occupation that are implemeted by AI models or systems, along with AI Impact ratio and numerical count of human-performed tasks. It provides AI-related data for over 4,000 job titles and is one of the few data sources we can find about AI affecting employment. We can use it to do analysis of which job roles are most likely to be replaced or enhanced. But the job titles in this dataset are unstandardized without official occupation codes, which makes it harder for us to merge it with the other one. The AI Impact ratios are not derived from labor market outcomes and there is no methodology about how they are computed.
+
+The other dataset contains 2023-2033 U.S. Bureau of Labor Statistics projections, including occupation titles with official occupation codes, employment change, median wages and entry-level education. This dataset is from U.S. BLS, an official and trusted source. It includes rich occupational details like education and wages. We can see which job titles are growing or shrinking in the following years and how that correlats with AI Impact. However, it does not have any AI-specific estimates and the projections could be outdated quickly, especially in tech-driven fields. 
+
+## visualization of most important findings
+
+```{r, out.width="100%", echo=FALSE}
+knitr::include_graphics("~/sta9750-2025-spring/q1v.png")
+```
+
+The above is a scatter plot showing the relationship between a job's AI Workload Ratio and the projected employment change from 2023 to 2033, broken down by each industry. We can see AI Risk is consistently low to moderate across all industries. Industries such as Data & IT and Medical & Healthcare show high employment growth despite AI Risk. Industries such as Administrative & Clerical and Sales & Marketing show higher AI Workload Ratios and little to no growth. 
+
+```{r, out.width="100%", echo=FALSE}
+knitr::include_graphics("~/sta9750-2025-spring/q2v.png")
+```
+
+By creating multiple heatmaps that displays the contrasts in each education level based on the task count, job count and AI Impact Ratio, we obtained the following findings. Most jobs are unlikely to be fully automated by AI, even if they have a high or low number of tasks. This suggests that while AI can streamline processes, full job displacement remains limited. Jobs with fewer tasks and higher job counts are more vulnerable, particularly those requiring High School Diploma, Bachelor's Degree and Doctoral or Professional Degree.
+
+**One more visual to be added later**
+
+## Relation to Prior Work
+
+AI is reshaping the U.S. job market by accelarating employment shifts, favoring highly skilled roles, and eroding low pay retail jobs. U.S. BLS currently assumes its employment effects will align with historical patterns of gradual technological change. Even when technologies significantly change how tasks are performed, they do not always result in job loss, so their projections focus on task-level impact rather than broad societal effects. Our projects aims to find the correlation between multiple factors such as education and employment levels as well as job titles and industries AI will affect either positively or negatively.
+
+## Potential Future Work
+
+If we had more time, we would refine fuzzy matching and analyze past employment trends. We could also use additional data sources like analyzed LinkedIn or Indeed postings, and Glassdoor or company datasets.
+
+**link to individual reports**
