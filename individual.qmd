@@ -7,8 +7,6 @@ format:
     toc-depth: 3
     number-sections: true
     code-fold: true
-editor: visual
-runtime: shiny
 ---
 
 ## Introduction
@@ -111,7 +109,7 @@ The correlation coefficient is -0.104, indicating a very weak negative correlati
 
 These results reinforce the earlier visual findings. While AI may play a role in shaping job trajectories, it is not the sole or dominant factor influencing projected employment changes. Some highly impacted jobs are expected to grow — possibly due to AI augmentation rather than replacement. 
 
-### Interactive Visualization: AI Impact vs. Employment Growth by Domain
+### Interactive Visualization I: AI Impact vs. Employment Growth by Domain
 
 ```{r, message=FALSE, warning=FALSE}
 library(ggplot2)
@@ -154,81 +152,221 @@ To enhance interpretability and user engagement, the scatter plot of AI impact v
 
 This visualization helps bridge the gap between macro-level insights (e.g., AI is negatively correlated with growth) and micro-level stories (e.g., specific job roles that defy the trend). It supports a richer understanding of how AI may transform work differently across occupational domains.
 
-::: {.cell}
-```{r, warning=FALSE, message=FALSE}
-library(shiny)
+### Interactive Visualization II: Faceted by Occupational Domain
+
+```{r, message=FALSE, warning=FALSE}
+# Load libraries
 library(ggplot2)
 library(plotly)
-library(dplyr)
-library(readr)
 
-# UI
-ui <- fluidPage(
-  titlePanel("AI Impact vs. Employment Growth Dashboard"),
-  
-  sidebarLayout(
-    sidebarPanel(
-      selectInput("domain", "Select Domain(s):", 
-                  choices = sort(unique(combined$Domain)), 
-                  selected = unique(combined$Domain),
-                  multiple = TRUE),
-      sliderInput("aiImpact", "AI Impact Range (%)", 
-                  min = 0, max = 100, value = c(0, 100)),
-      downloadButton("downloadData", "Download Filtered Data")
-    ),
-    
-    mainPanel(
-      plotlyOutput("interactivePlot", height = "700px")
-    )
-  )
-)
+# Base ggplot
+p <- ggplot(combined, aes(x = AI.Impact.Numeric, y = Employment.Growth)) +
+  geom_point(aes(color = Domain, text = paste("Job:", Job.titiles,
+                                              "<br>AI Impact:", AI.Impact,
+                                              "<br>Growth:", round(Employment.Growth, 2), "%")), 
+             alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  facet_wrap(~ Domain, scales = "free_y") +
+  labs(
+    title = "AI Impact vs. Employment Growth by Occupational Domain",
+    x = "AI Impact (%)",
+    y = "Employment Growth (2023–2033, %)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
 
-# Server
-server <- function(input, output) {
-  
-  # Reactive data based on inputs
-  filtered_data <- reactive({
-    combined %>%
-      filter(Domain %in% input$domain,
-             AI.Impact.Numeric >= input$aiImpact[1],
-             AI.Impact.Numeric <= input$aiImpact[2])
-  })
-  
-  # Interactive plot
-  output$interactivePlot <- renderPlotly({
-    p <- ggplot(filtered_data(), aes(x = AI.Impact.Numeric, 
-                                     y = Employment.Growth)) +
-      geom_point(aes(color = Domain, text = paste(
-        "Job:", Job.titiles,
-        "<br>AI Impact:", AI.Impact,
-        "<br>Growth:", Employment.Growth, "%",
-        "<br>Domain:", Domain
-      )), alpha = 0.7, size = 2) +
-      geom_smooth(method = "lm", se = FALSE, color = "black") +
-      facet_wrap(~ Domain, scales = "free_y") +
-      labs(
-        title = "AI Impact vs. Employment Growth by Domain",
-        x = "AI Impact (%)",
-        y = "Employment Growth (%)"
-      ) +
-      theme_minimal() +
-      theme(legend.position = "none")
-    
-    ggplotly(p, tooltip = "text")
-  })
-  
-  # Download filtered dataset
-  output$downloadData <- downloadHandler(
-    filename = function() {
-      paste("filtered_ai_employment_data_", Sys.Date(), ".csv", sep = "")
-    },
-    content = function(file) {
-      write.csv(filtered_data(), file, row.names = FALSE)
-    }
-  )
-}
-
-# Run the app
-shinyApp(ui = ui, server = server)
+# Convert to interactive plotly
+ggplotly(p, tooltip = "text")
 
 ```
+
+To explore the relationship between AI impact and projected employment growth across occupational categories, we created an interactive faceted plot using the `ggplot2` and `plotly` packages in R. This visualization enables users to engage dynamically with the data, filtering and examining patterns by domain and occupation.
+
+In the plot, each point represents an occupation, colored by its associated domain (e.g., Data & IT, Healthcare, Administrative). The x-axis indicates the AI impact score (as a percentage), while the y-axis shows the projected employment growth between 2023 and 2033. A linear trend line is included in each facet to highlight overall directionality within each domain.
+
+With this interactive plot, you can
+
+- Use Hover tooltips to see the job title, AI impact percentage, and employment growth.
+
+- Zoom for deeper exploration within specific domains.
+
+This visualization reveals that some domains like construction show growth despite high AI impact, suggesting potential augmentation rather than replacement.
+
+### Key Occupations
+
+To highlight the occupational roles most likely to thrive in an AI-driven economy, we identified “key occupations” that meet two criteria:
+
+- High AI Impact: ≥ 80% estimated task exposure to AI.
+
+- Positive Employment Growth: ≥ 5% projected increase between 2023 and 2033.
+
+These thresholds isolate occupations that are both heavily impacted by AI technologies and expected to expand in workforce demand, implying potential augmentation rather than replacement.
+
+The interactive table below presents these key occupations, reveals a diverse set of occupations across multiple domains—particularly those leveraging data, communication, and technical skills. These roles demonstrate how AI is not solely a threat but also a driver of transformation and opportunity for certain career paths.
+
+Use the interactive table below to sort, filter, and explore these roles in more detail.
+
+```{r}
+# Define thresholds
+impact_threshold <- 80   # AI impact above 80%
+growth_threshold <- 5   # Employment growth above 5%
+
+# Flag key occupations
+combined <- combined |>
+  mutate(Key.Occupation = ifelse(AI.Impact.Numeric >= impact_threshold & 
+                                   Employment.Growth >= growth_threshold, 
+                                 TRUE, FALSE))
+
+# Create the Table
+key_jobs <- combined |>
+  filter(Key.Occupation == TRUE) |>
+  select(Job.titiles, Domain, AI.Impact.Numeric, Employment.Growth,
+         Median.Annual.Wage.2024, Typical.Entry.Level.Education) |>
+  arrange(desc(AI.Impact.Numeric), desc(Employment.Growth)) |>
+  unique() 
+
+# Interactive Table
+DT::datatable(
+  key_jobs,
+  options = list(pageLength = 10),
+  caption = "Key Occupations with High AI Impact and Employment Growth"
+)
+```
+
+### Occupational Clustering
+
+We applied k-means clustering to group jobs based on three key standardized variables:
+
+- AI Impact (% of tasks potentially affected by AI),
+
+- Projected Employment Growth (2023–2033), and
+
+- Median Annual Wage (2024).
+
+#### Methodology
+
+After standardizing the variables and removing missing values, we used k-means clustering (k = 3) to identify latent occupational groups. These clusters were then interpreted and labeled based on their centroid characteristics:
+
+- Transforming: High AI impact, moderate to high growth — roles likely to be augmented or significantly reshaped by AI.
+
+- Declining: High AI impact, low or negative growth — roles at risk of automation-driven displacement.
+
+- Safe: Lower AI impact and relatively stable growth — roles that appear resistant to AI-driven disruption.
+
+#### Results
+
+The scatterplot below visualizes these clusters. Each point represents an occupation, colored by its assigned cluster label. The distribution illustrates clear structural patterns. Many data-intensive and analytical roles are “Transforming” — affected by AI but growing in demand. Several clerical and administrative roles cluster in the “Declining” group, marked by high AI exposure and shrinking employment projections. “Safe” roles tend to be more interpersonal or physical in nature, with lower AI impact and stable demand. 
+
+```{r, warning=FALSE}
+# 1: Prepare Data for Clustering
+# Clean wage to numeric
+combined <- combined |>
+  mutate(Wage = as.numeric(gsub(",", "", Median.Annual.Wage.2024)))
+
+# Select and scale features
+clustering_data <- combined |>
+  select(AI.Impact.Numeric, Employment.Growth, Wage) |>
+  scale()  # standardize
+
+clustering_data_clean <- clustering_data |>
+  as.data.frame() %>%
+  filter(complete.cases(.))  # removes rows with NA
+combined_clean <- combined[complete.cases(clustering_data), ]
+
+
+# 2: Run k-means (3 clusters)
+set.seed(123)
+kmeans_result <- kmeans(clustering_data_clean, centers = 3, nstart = 25)
+
+# Add cluster assignments to original data
+combined_clean$Cluster <- as.factor(kmeans_result$cluster)
+
+# 3: Label Clusters
+aggregate(cbind(AI.Impact.Numeric, Employment.Growth, Wage) ~ Cluster, 
+          data = combined_clean, 
+          FUN = mean)
+combined_clean <- combined_clean |>
+  mutate(Cluster.Label = recode(Cluster,
+                                `1` = "Transforming",
+                                `2` = "Declining",
+                                `3` = "Safe"))
+
+# 4: Visualize the Clusters
+# Load necessary library
+library(plotly)
+
+# Create the ggplot object
+p <- ggplot(combined_clean, aes(x = AI.Impact.Numeric, 
+                                y = Employment.Growth, 
+                                color = Cluster.Label,
+                                text = paste("Job:", Job.titiles,
+                                             "<br>AI Impact:", round(AI.Impact.Numeric, 1), "%",
+                                             "<br>Growth:", round(Employment.Growth, 1), "%",
+                                             "<br>Wage: $", Wage))) +
+  geom_point(alpha = 0.7, size = 2) +
+  labs(
+    title = "Clustered Occupation Types",
+    x = "AI Impact (%)",
+    y = "Employment Growth (2023–2033, %)",
+    color = "Occupation Type"
+  ) +
+  theme_minimal()
+
+# Convert to interactive plot
+ggplotly(p, tooltip = "text")
+
+```
+
+## Top 10 At-Risk and AI-Enhanced Occupations
+
+```{r, warning=FALSE}
+# 1: Create Ranking Tables
+# Ensure numeric AI Impact and Growth
+combined <- combined |>
+  mutate(
+    AI.Impact.Numeric = as.numeric(gsub("%", "", AI.Impact)),
+    Employment.Growth = Employment.Percent.Change..2023.2033,
+    Wage = as.numeric(gsub(",", "", Median.Annual.Wage.2024))
+  )
+
+# Top 10 AI-Enhanced
+ai_enhanced <- combined |>
+  filter(AI.Impact.Numeric >= 80, Employment.Growth > 5) |>
+  arrange(desc(AI.Impact.Numeric), desc(Employment.Growth)) |>
+  select(Job.titiles, Domain, AI.Impact.Numeric, Employment.Growth, Wage) |>
+  head(10)
+
+# Top 10 At-Risk
+at_risk <- combined |>
+  filter(AI.Impact.Numeric >= 80, Employment.Growth < 0) |>
+  arrange(desc(AI.Impact.Numeric), Employment.Growth) |>
+  select(Job.titiles, Domain, AI.Impact.Numeric, Employment.Growth, Wage) |>
+  head(10)
+
+# 2: Chart
+ai_enhanced$Category <- "AI-Enhanced"
+at_risk$Category <- "At-Risk"
+
+top_jobs <- bind_rows(ai_enhanced, at_risk)
+
+ggplot(top_jobs, aes(x = reorder(Job.titiles, AI.Impact.Numeric), 
+                     y = AI.Impact.Numeric, 
+                     fill = Category)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  facet_wrap(~ Category, scales = "free_y") +
+  labs(
+    title = "Top 10 At-Risk and AI-Enhanced Jobs",
+    x = "Job Title",
+    y = "AI Impact (%)"
+  ) +
+  theme_minimal()
+
+```
+
+We identified two sets of occupations: those with high AI impact (≥80%) and positive employment growth (>5%), and those with high AI impact but negative projected employment growth. These were categorized as AI-Enhanced and At-Risk jobs, respectively. The plot above presents a side-by-side comparison of the top 10 occupations in each category. Occupations are ranked by their AI impact, and the faceted view allows for clear distinction between the two trajectories. 
+
+AI-Enhanced roles like Data Operators or Database Developers are expected to grow despite high exposure to AI, suggesting that AI might be complementing rather than replacing these positions. In contrast, At-Risk roles like Data Collectors or Data Clerks show declining employment prospects, highlighting the potential displacement effect of automation and AI technologies.
+
+This comparison underscores the nuanced role of AI: while some jobs are being transformed and elevated, others are more vulnerable. These findings contribute to the broader understanding of how AI will likely reconfigure occupational demand, not uniformly eliminate or expand it.
+
