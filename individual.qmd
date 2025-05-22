@@ -17,6 +17,70 @@ Artificial Intelligence (AI) is reshaping the modern workforce. This report expl
 
 ## Data Sources
 
+```{r, message=FALSE}
+# Load required libraries
+if (!requireNamespace("httr", quietly = TRUE)) install.packages("httr")
+library(httr)
+
+# Define paths
+dir_path <- "data/project"
+zip_filename <- "from-data-entry-to-ceo-the-ai-job-threat-index.zip"
+zip_path <- file.path(dir_path, zip_filename)
+
+# Create directory if it doesn't exist
+if (!dir.exists(dir_path)) {
+  dir.create(dir_path, recursive = TRUE)
+}
+
+# Check if file already exists
+if (!file.exists(zip_path)) {
+  
+  # Load Kaggle credentials from ~/.kaggle/kaggle.json
+  kaggle_json_path <- file.path(Sys.getenv("HOME"), ".kaggle", "kaggle.json")
+  
+  if (!file.exists(kaggle_json_path)) {
+    stop("Kaggle API key not found at ~/.kaggle/kaggle.json")
+  }
+  
+  kaggle_creds <- jsonlite::fromJSON(kaggle_json_path)
+  username <- kaggle_creds$username
+  key <- kaggle_creds$key
+  
+  # Prepare request
+  kaggle_url <- "https://www.kaggle.com/api/v1/datasets/download/manavgupta92/from-data-entry-to-ceo-the-ai-job-threat-index"
+  
+  message("Downloading dataset from Kaggle using R...")
+  
+  response <- httr::GET(
+    url = kaggle_url,
+    authenticate(username, key),
+    httr::write_disk(zip_path, overwrite = TRUE),
+    httr::progress()
+  )
+  
+  if (httr::status_code(response) != 200) {
+    stop("Failed to download dataset. Status code: ", httr::status_code(response))
+  }
+  
+} else {
+  message("Dataset already downloaded.")
+}
+
+# Unzip if not already unzipped
+csv_files <- list.files(dir_path, pattern = "\\.csv$", full.names = TRUE)
+if (length(csv_files) == 0 && file.exists(zip_path)) {
+  message("Unzipping dataset...")
+  unzip(zip_path, exdir = dir_path)
+} else {
+  message("Dataset already unzipped or no zip found.")
+}
+
+# read data into r
+ai <- read.csv("data/project/My_Data.csv")
+employment <- read.csv("data/project/Employment Projections.csv")
+
+```
+
 - **AI Impact Dataset**: Contains AI workload ratios and task information by job title.
 - **Employment Projections Dataset**: Includes projected job growth, median wages, and education requirements by occupation.
 
@@ -25,13 +89,6 @@ Both datasets required cleaning and merging based on job titles, which often inv
 ## Data Processing
 
 ```{r, message=FALSE, warning=FALSE}
-ai = read.csv("~/sta9750-2025-spring/data/cp/my_data.csv")
-employment = read.csv("~/sta9750-2025-spring/data/cp/employment projections.csv")
-
-#library(dplyr)
-#glimpse(ai)
-#glimpse(employment)
-
 library(dplyr)
 library(stringr)
 library(tidyr)
