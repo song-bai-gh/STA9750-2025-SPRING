@@ -45,7 +45,11 @@ knitr::include_graphics("~/sta9750-2025-spring/q2v.png")
 
 By creating multiple heatmaps that displays the contrasts in each education level based on the task count, job count and AI Impact Ratio, we obtained the following findings. Most jobs are unlikely to be fully automated by AI, even if they have a high or low number of tasks. This suggests that while AI can streamline processes, full job displacement remains limited. Jobs with fewer tasks and higher job counts are more vulnerable, particularly those requiring High School Diploma, Bachelor's Degree and Doctoral or Professional Degree.
 
-**One more visual to be added later**
+```{r, out.width="100%", echo=FALSE}
+knitr::include_graphics("~/sta9750-2025-spring/q3.png")
+```
+
+This faceted plot above presents an overview of the relationship between AI impact and projected employment growth (2023–2033) across different occupational domains. Each facet represents a distinct domain, allowing for comparisons between various domains. The scatter points, colored by domain, represent individual occupations. A linear trendline is overlaid in black within each domain to capture general directional trends.
 
 ## Relation to Prior Work
 
@@ -55,4 +59,10 @@ AI is reshaping the U.S. job market by accelarating employment shifts, favoring 
 
 If we had more time, we would refine fuzzy matching and analyze past employment trends. We could also use additional data sources like analyzed LinkedIn or Indeed postings, and Glassdoor or company datasets.
 
-**link to individual reports**
+**Links to individual reports**
+
+[https://tiffany-b.github.io/STA9750-2025-SPRING/individual_report.html](https://tiffany-b.github.io/STA9750-2025-SPRING/individual_report.html).
+
+[https://wowlime.github.io/STA9750-2025-SPRING/individual_report.html](https://wowlime.github.io/STA9750-2025-SPRING/individual_report.html).
+
+[https://song-bai-gh.github.io/STA9750-2025-SPRING/individual.html](https://song-bai-gh.github.io/STA9750-2025-SPRING/individual.html).
