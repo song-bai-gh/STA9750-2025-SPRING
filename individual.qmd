@@ -257,7 +257,7 @@ After standardizing the variables and removing missing values, we used k-means c
 
 The scatterplot below visualizes these clusters. Each point represents an occupation, colored by its assigned cluster label. The distribution illustrates clear structural patterns. Many data-intensive and analytical roles are “Transforming” — affected by AI but growing in demand. Several clerical and administrative roles cluster in the “Declining” group, marked by high AI exposure and shrinking employment projections. “Safe” roles tend to be more interpersonal or physical in nature, with lower AI impact and stable demand. 
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, results='hide'}
 # 1: Prepare Data for Clustering
 # Clean wage to numeric
 combined <- combined |>
@@ -285,6 +285,9 @@ combined_clean$Cluster <- as.factor(kmeans_result$cluster)
 aggregate(cbind(AI.Impact.Numeric, Employment.Growth, Wage) ~ Cluster, 
           data = combined_clean, 
           FUN = mean)
+```
+
+```{r}
 combined_clean <- combined_clean |>
   mutate(Cluster.Label = recode(Cluster,
                                 `1` = "Transforming",
